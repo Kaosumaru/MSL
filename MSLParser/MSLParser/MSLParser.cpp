@@ -114,6 +114,18 @@ namespace client
 	{
 		using standard_rule = qi::rule<Iterator, msl::Value::pointer(), ascii::space_type>;
 
+
+		template<typename Type>
+		auto createAttrSynthesizer()
+		{
+			
+			return [](auto&& f, auto &c)
+			{
+				using namespace boost::fusion;
+				at_c<0>(c.attributes) = std::make_shared<Type>(f);
+			};
+		}
+
 		msl_grammar() : msl_grammar::base_type(msl)
 		{
 			using namespace msl;
@@ -126,52 +138,29 @@ namespace client
 			using ascii::char_;
 			using ascii::string;
 			using namespace qi::labels;
-			using namespace boost::fusion;
+			
 
 			//float
 			{
-				auto ffunc = [](auto& f, auto &c) 
-				{ 
-					at_c<0>(c.attributes) = std::make_shared<FloatValue>(f);
-				};
-
-				rule_float = float_[ffunc];
+				rule_float = float_[createAttrSynthesizer<FloatValue>()];
 			}
 
 			//string
 			{
-				auto func = [](auto&& f, auto &c)
-				{ 
-					at_c<0>(c.attributes) = std::make_shared<StringValue>(f);
-				};
-
-				
 				quoted_string %= lexeme['"' >> *(char_ - '"') >> '"'];
-
-				rule_string = quoted_string[func];
+				rule_string = quoted_string[createAttrSynthesizer<StringValue>()];
 			}
 
 			//array
 			{
 				rule_varray %= '[' >> *rule_value >> ']';
-
-				auto func = [](auto&& f, auto &c)
-				{
-					at_c<0>(c.attributes) = std::make_shared<ArrayValue>(f);
-				};
-				rule_array = rule_varray[func];
+				rule_array = rule_varray[createAttrSynthesizer<ArrayValue>()];
 			}
 
 			//map
 			{
 				rule_vmap %= qi::lit("{") >> *(rule_value >> qi::lit(":") >> rule_value) >> qi::lit("}");
-
-				
-				auto func = [](auto&& f, auto &c)
-				{
-					at_c<0>(c.attributes) = std::make_shared<MapValue>(f);
-				};
-				rule_map = rule_vmap[func];
+				rule_map = rule_vmap[createAttrSynthesizer<MapValue>()];
 			}
 
 
