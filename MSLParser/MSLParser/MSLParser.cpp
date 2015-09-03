@@ -18,6 +18,7 @@
 #include <boost/spirit/include/qi_char_class.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/fusion/include/std_pair.hpp>
+#include <boost/spirit/repository/include/qi_confix.hpp>
 
 /*
 MSL Parser
@@ -142,12 +143,39 @@ namespace client
 
 
 
+	namespace qi = boost::spirit::qi;
+	namespace ascii = boost::spirit::ascii;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  The skipper grammar
+	///////////////////////////////////////////////////////////////////////////////
+	template <typename Iterator>
+	struct skipper : qi::grammar<Iterator>
+	{
+		skipper() : skipper::base_type(start)
+		{
+			qi::char_type char_;
+			ascii::space_type space;
+
+			start =
+				space                               // tab/space/cr/lf
+				| "/*" >> *(char_ - "*/") >> "*/"   // C-style comments
+				| "//" >> *(char_ - eol) >> eol     // C++-style comments
+				;
+		}
+
+		qi::rule<Iterator> start;
+	};
+
+
+
+
 	using namespace boost::spirit;
 
 	template <typename Iterator>
-	struct msl_grammar : qi::grammar<Iterator, msl::Value::pointer(), ascii::space_type>
+	struct msl_grammar : qi::grammar<Iterator, msl::Value::pointer(), skipper<Iterator>>
 	{
-		using standard_rule = qi::rule<Iterator, msl::Value::pointer(), ascii::space_type>;
+		using standard_rule = qi::rule<Iterator, msl::Value::pointer(), skipper<Iterator>>;
 
 
 		template<typename Type>
@@ -241,8 +269,8 @@ namespace client
 		standard_rule rule_named_array;
 		standard_rule rule_named_map;
 
-		qi::rule<Iterator, msl::Value::MapType(), ascii::space_type> rule_vmap;
-		qi::rule<Iterator, msl::Value::ArrayType(), ascii::space_type> rule_varray;
+		qi::rule<Iterator, msl::Value::MapType(), skipper<Iterator>> rule_vmap;
+		qi::rule<Iterator, msl::Value::ArrayType(), skipper<Iterator>> rule_varray;
 		qi::rule<Iterator, std::string()> quoted_string;
 
 		qi::rule<Iterator, std::string()> simple_string;
@@ -255,7 +283,14 @@ namespace client
 		msl::Value::pointer ast; // Our tree
 
 		using boost::spirit::ascii::space;
-		bool r = phrase_parse(first, last, msl, space, ast);
+		using boost::spirit::repository::confix;
+		using ascii::char_;
+
+
+		//qi::rule<Iterator> 
+		skipper<Iterator> skipper;
+
+		bool r = phrase_parse(first, last, msl, skipper, ast);
 
 		return ast;
 	}
@@ -309,7 +344,9 @@ int main()
 		[
 			50%
 			tr()[1 2 3]
-			"Test"
+			/*"Test"*/
+			"Test2"
+			//"Test3"
 		]
 
 		)foo";
