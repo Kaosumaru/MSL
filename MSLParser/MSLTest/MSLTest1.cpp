@@ -52,10 +52,11 @@ namespace MSLTest
 
 		TEST_METHOD(String_Array)
 		{
-			auto a = msl::Value::fromString("[aaa bbb]");
-			Assert::AreEqual(2, (int)a->asArray().size());
+			auto a = msl::Value::fromString("[aaa bbb \"aaa bbb\"]");
+			Assert::AreEqual(3, (int)a->asArray().size());
 			Assert::AreEqual("aaa"s, a->asArray()[0]->asString());
 			Assert::AreEqual("bbb"s, a->asArray()[1]->asString());
+			Assert::AreEqual("aaa bbb"s, a->asArray()[2]->asString());
 		}
 
 	};
@@ -94,5 +95,34 @@ namespace MSLTest
 		}
 
 	};
+
+	TEST_CLASS(MSL_Parse_Comments)
+	{
+	public:
+
+		TEST_METHOD(Comments_SimpleParse)
+		{
+			auto str = R"foo( 
+			[
+				0
+				//1 [this is commented out
+				2
+				3
+				/*4 also this ]*/
+			]
+			)foo";
+
+			auto a = msl::Value::fromString(str);
+			Assert::AreEqual(3, (int)a->asArray().size());
+
+			Assert::AreEqual(0.f, a->asArray()[0]->asFloat());
+			Assert::AreEqual(2.f, a->asArray()[1]->asFloat());
+			Assert::AreEqual(3.f, a->asArray()[2]->asFloat());
+		}
+
+
+
+	};
+
 
 }
