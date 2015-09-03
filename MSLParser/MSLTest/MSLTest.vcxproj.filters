@@ -14,11 +14,8 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="MSL">
-      <UniqueIdentifier>{fd6d5698-4e72-462a-8c64-17f22055d8fb}</UniqueIdentifier>
+      <UniqueIdentifier>{275aa6f3-7b33-49c1-a9d9-41b1ffae6a1c}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -35,11 +32,11 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MSLParser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MSL\MSL.cpp">
       <Filter>MSL</Filter>
+    </ClCompile>
+    <ClCompile Include="MSLTest1.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
