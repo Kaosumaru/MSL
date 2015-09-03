@@ -9,12 +9,15 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <memory>
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/fusion/include/std_pair.hpp>
+
 /*
 MSL Parser
 
@@ -42,12 +45,14 @@ namespace msl
 	public:
 		using pointer = std::shared_ptr<Value>;
 		using ArrayType = std::vector<pointer>;
+		using MapType = std::map<pointer, pointer>;
 
 		enum class Type { String, Float, Boolean, Null, Array, Map };
 
 		virtual float asFloat() { return 0.0f; }
 		virtual const std::string& asString() { static std::string n = "Null"; return n; };
 		virtual const ArrayType& asArray() { throw std::exception(); }
+		virtual const MapType& asMap() { throw std::exception(); }
 
 	protected:
 		Type _type = Type::Null;
@@ -87,78 +92,18 @@ namespace msl
 		using base_type::TemplatedValue;
 		const ArrayType& asArray() override { return _value; }
 	};
+
+	class MapValue : public TemplatedValue<Value::MapType, Value::Type::Map>
+	{
+	public:
+		using base_type::TemplatedValue;
+		const MapType& asMap() override { return _value; }
+	};
 };
 
 
 namespace client
 {
-	template <typename Iterator>
-	msl::Value::pointer parse_complex(Iterator first, Iterator last)
-	{
-		using namespace msl;
-		using namespace boost::spirit;
-		using qi::rule;
-		using qi::float_;
-		using qi::_1;
-		using qi::phrase_parse;
-		using ascii::space;
-		using ascii::char_;
-		using ascii::string;
-
-		using boost::phoenix::ref;
-
-		//float float_value = 0.0;
-		//std::string
-		msl::Value::pointer ptr;
-
-		//value!
-		rule<Iterator> rule_value;
-
-		rule<Iterator> rule_string;
-		rule<Iterator> rule_float;
-		rule<Iterator> rule_array;
-
-		//string
-		{
-			auto sfunc = [&](auto&& f) { ptr = boost::make_shared<StringValue>(f); };
-
-			rule<Iterator, std::string()> rule_string_nq = lexeme[+(char_ - ' ')[_val += _1]];
-			rule<Iterator, std::string()> rule_string_q = lexeme['"' >> +(char_ - '"')[_val += _1] >> '"'];
-			rule_string = rule_string_q[sfunc] | rule_string_nq[sfunc];
-		}
-
-		//float
-		{
-			auto ffunc = [&](auto&& f) { ptr = boost::make_shared<FloatValue>(f); };
-			rule_float = float_[ffunc];
-		}
-
-		//array
-		{
-			rule_array = '[' >> +rule_value >> ']';
-		}
-
-
-		rule_value = rule_array | rule_float | rule_string;
-
-
-
-		bool r = phrase_parse(first, last,
-
-			//  Begin grammar
-			(
-				rule_value
-			),
-			//  End grammar
-
-			space);
-
-#if 0
-		if (!r || first != last) // fail if we did not get a full match
-			return false;
-#endif
-		return ptr;
-	}
 
 
 
@@ -183,11 +128,6 @@ namespace client
 			using namespace qi::labels;
 			using namespace boost::fusion;
 
-
-			
-
-			//standard_rule rule_value = rule_float;
-			
 			//float
 			{
 				auto ffunc = [](auto& f, auto &c) 
@@ -206,14 +146,13 @@ namespace client
 				};
 
 				
-				quoted_string %= lexeme['"' >> +(char_ - '"') >> '"'];
+				quoted_string %= lexeme['"' >> *(char_ - '"') >> '"'];
 
 				rule_string = quoted_string[func];
 			}
 
 			//array
 			{
-				
 				rule_varray %= '[' >> *rule_value >> ']';
 
 				auto func = [](auto&& f, auto &c)
@@ -223,9 +162,20 @@ namespace client
 				rule_array = rule_varray[func];
 			}
 
+			//map
+			{
+				rule_vmap %= qi::lit("{") >> *(rule_value >> qi::lit(":") >> rule_value) >> qi::lit("}");
+
+				
+				auto func = [](auto&& f, auto &c)
+				{
+					at_c<0>(c.attributes) = std::make_shared<MapValue>(f);
+				};
+				rule_map = rule_vmap[func];
+			}
 
 
-			rule_value = rule_float | rule_array | rule_string;
+			rule_value = rule_float | rule_array | rule_map | rule_string;
 			msl = rule_value;
 		}
 
@@ -235,9 +185,10 @@ namespace client
 		standard_rule rule_float;
 		standard_rule rule_string;
 		standard_rule rule_array;
+		standard_rule rule_map;
 
 
-
+		qi::rule<Iterator, msl::Value::MapType(), ascii::space_type> rule_vmap;
 		qi::rule<Iterator, msl::Value::ArrayType(), ascii::space_type> rule_varray;
 		qi::rule<Iterator, std::string()> quoted_string;
 	};
@@ -278,7 +229,21 @@ int main()
 		auto p = client::parse_msl(str.begin(), str.end());
 
 
-		std::string strArr = "[34.1 2 \"Test\"]";
+		//std::string strArr = "[34.1 {1:1 \"Mateusz\":\"Borycki\"} \"Test\"]";
+
+		std::string strArr = R"foo(
+
+		[
+			34.1
+			{
+				1:1 
+				"Mateusz":"Borycki"
+			}
+			"Test"
+		]
+
+		)foo";
+
 		auto arr = client::parse_msl(strArr.begin(), strArr.end());
 	}
 	
