@@ -187,7 +187,13 @@ namespace client
 
 			//float
 			{
-				rule_float = float_[createAttrSynthesizer<FloatValue>()];
+				auto percent = [](auto&& f, auto &c)
+				{
+					using namespace boost::fusion;
+					at_c<0>(c.attributes) = std::make_shared<FloatValue>(f / 100.0f);
+				};
+
+				rule_float = (float_ >> '%')[percent] | float_[createAttrSynthesizer<FloatValue>()];
 			}
 
 			//string
@@ -301,7 +307,7 @@ int main()
 		std::string strArr = R"foo(
 
 		[
-			Test.1
+			50%
 			tr()[1 2 3]
 			"Test"
 		]
