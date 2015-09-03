@@ -1,7 +1,12 @@
 // MSLParser.cpp : Defines the entry point for the console application.
 //
 
+
 #include "stdafx.h"
+#define BOOST_RESULT_OF_USE_DECLTYPE
+#define BOOST_SPIRIT_USE_PHOENIX_V3
+
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -35,8 +40,8 @@ namespace msl
 	class Value
 	{
 	public:
-		using pointer = std::unique_ptr<Value>;
-		using ArrayType = std::vector<Value>;
+		using pointer = std::shared_ptr<Value>;
+		using ArrayType = std::vector<pointer>;
 
 		enum class Type { String, Float, Boolean, Null, Array, Map };
 
@@ -52,6 +57,8 @@ namespace msl
 	class TemplatedValue : public Value
 	{
 	public:
+		using base_type = TemplatedValue<T, type>;
+
 		TemplatedValue() : { _type = type; }
 		TemplatedValue(const T& t) : _value(t) { _type = type; }
 		TemplatedValue(T&& t) : _value(std::move(t)) { _type = type; }
@@ -63,21 +70,21 @@ namespace msl
 	class StringValue : public TemplatedValue<std::string, Value::Type::String>
 	{
 	public:
-		using TemplatedValue<std::string, Value::Type::String>::TemplatedValue;
+		using base_type::TemplatedValue;
 		const std::string& asString() override { return _value; }
 	};
 
 	class FloatValue : public TemplatedValue<float, Value::Type::Float>
 	{
 	public:
-		using TemplatedValue<float, Value::Type::Float>::TemplatedValue;
+		using base_type::TemplatedValue;
 		float asFloat() override { return _value; }
 	};
 
 	class ArrayValue : public TemplatedValue<Value::ArrayType, Value::Type::Array>
 	{
 	public:
-		using TemplatedValue<Value::ArrayType, Value::Type::Array>::TemplatedValue;
+		using base_type::TemplatedValue;
 		const ArrayType& asArray() override { return _value; }
 	};
 };
@@ -113,7 +120,7 @@ namespace client
 
 		//string
 		{
-			auto sfunc = [&](auto&& f) { ptr = std::make_unique<StringValue>(f); };
+			auto sfunc = [&](auto&& f) { ptr = std::make_shared<StringValue>(f); };
 
 			rule<Iterator, std::string()> rule_string_nq = lexeme[+(char_ - ' ')[_val += _1]];
 			rule<Iterator, std::string()> rule_string_q = lexeme['"' >> +(char_ - '"')[_val += _1] >> '"'];
@@ -122,7 +129,7 @@ namespace client
 
 		//float
 		{
-			auto ffunc = [&](auto&& f) { ptr = std::make_unique<FloatValue>(f); };
+			auto ffunc = [&](auto&& f) { ptr = std::make_shared<FloatValue>(f); };
 			rule_float = float_[ffunc];
 		}
 
@@ -152,6 +159,80 @@ namespace client
 #endif
 		return ptr;
 	}
+
+
+
+	using namespace boost::spirit;
+
+	template <typename Iterator>
+	struct msl_grammar : qi::grammar<Iterator, msl::Value::pointer(), ascii::space_type>
+	{
+		using standard_rule = qi::rule<Iterator, msl::Value::pointer(), ascii::space_type>;
+
+		msl_grammar() : msl_grammar::base_type(msl)
+		{
+			using namespace msl;
+			using qi::lit;
+			using qi::rule;
+			using qi::float_;
+			using qi::_1;
+			using qi::phrase_parse;
+			using ascii::space;
+			using ascii::char_;
+			using ascii::string;
+			using namespace qi::labels;
+			using namespace boost::fusion;
+
+
+			standard_rule rule_float;
+			standard_rule rule_string;
+
+			//standard_rule rule_value = rule_float;
+			
+			//float
+			{
+				auto ffunc = [](auto& f, auto &c) 
+				{ 
+					at_c<0>(c.attributes) = std::make_shared<FloatValue>(f); 
+				};
+
+				rule_float = float_[ffunc];
+			}
+
+			//string
+			{
+				auto func = [](auto&& f, auto &c)
+				{ 
+					at_c<0>(c.attributes) = std::make_shared<StringValue>(f);
+				};
+
+				rule<Iterator, std::string()> rule_string_nq = lexeme[+(char_ - ' ')[_val += _1]];
+				rule<Iterator, std::string()> rule_string_q = lexeme['"' >> +(char_ - '"')[_val += _1] >> '"'];
+				rule_string = rule_string_q[func] | rule_string_nq[func];
+			}
+
+
+			msl = rule_float;
+			
+		}
+
+		standard_rule msl;
+
+	};
+
+	template <typename Iterator>
+	msl::Value::pointer parse_msl(Iterator first, Iterator last)
+	{
+		msl_grammar<Iterator> msl; // Our grammar
+		msl::Value::pointer ast; // Our tree
+
+		using boost::spirit::ascii::space;
+		bool r = phrase_parse(first, last, msl, space, ast);
+
+		return ast;
+	}
+
+
 }
 
 int main()
@@ -168,7 +249,7 @@ int main()
 
 	{
 		std::string str = "34.1";
-		auto p = client::parse_complex(str.begin(), str.end());
+		auto p = client::parse_msl(str.begin(), str.end());
 	}
 
 	{
