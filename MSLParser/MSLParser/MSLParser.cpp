@@ -15,6 +15,7 @@
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
+#include <boost/spirit/include/qi_char_class.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/fusion/include/std_pair.hpp>
 
@@ -122,7 +123,7 @@ namespace client
 			return [](auto&& f, auto &c)
 			{
 				using namespace boost::fusion;
-				at_c<0>(c.attributes) = std::make_shared<Type>(f);
+				at_c<0>(c.attributes) = std::make_shared<Type>(std::move(f));
 			};
 		}
 
@@ -136,6 +137,7 @@ namespace client
 			using qi::phrase_parse;
 			using ascii::space;
 			using ascii::char_;
+			using ascii::alpha;
 			using ascii::string;
 			using namespace qi::labels;
 			
@@ -148,7 +150,9 @@ namespace client
 			//string
 			{
 				quoted_string %= lexeme['"' >> *(char_ - '"') >> '"'];
-				rule_string = quoted_string[createAttrSynthesizer<StringValue>()];
+				simple_string %= alpha >> *(char_("a-zA-Z0-9\\.\\-"));
+
+				rule_string = (quoted_string | simple_string)[createAttrSynthesizer<StringValue>()];
 			}
 
 			//array
@@ -180,6 +184,8 @@ namespace client
 		qi::rule<Iterator, msl::Value::MapType(), ascii::space_type> rule_vmap;
 		qi::rule<Iterator, msl::Value::ArrayType(), ascii::space_type> rule_varray;
 		qi::rule<Iterator, std::string()> quoted_string;
+
+		qi::rule<Iterator, std::string()> simple_string;
 	};
 
 	template <typename Iterator>
@@ -223,6 +229,7 @@ int main()
 		std::string strArr = R"foo(
 
 		[
+			Test.1
 			34.1
 			{
 				1:1 
