@@ -26,3 +26,7 @@
 *.exe
 *.out
 *.app
+*.idb
+MSLParser/MSLParser/Debug/
+MSLParser/ipch/MSLPARSER-18f4f580/MSLPARSER-19ab9da5.ipch
+*.sdf
