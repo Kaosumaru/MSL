@@ -14,7 +14,7 @@
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
-
+#include <boost/make_shared.hpp>
 /*
 MSL Parser
 
@@ -120,7 +120,7 @@ namespace client
 
 		//string
 		{
-			auto sfunc = [&](auto&& f) { ptr = std::make_shared<StringValue>(f); };
+			auto sfunc = [&](auto&& f) { ptr = boost::make_shared<StringValue>(f); };
 
 			rule<Iterator, std::string()> rule_string_nq = lexeme[+(char_ - ' ')[_val += _1]];
 			rule<Iterator, std::string()> rule_string_q = lexeme['"' >> +(char_ - '"')[_val += _1] >> '"'];
@@ -129,7 +129,7 @@ namespace client
 
 		//float
 		{
-			auto ffunc = [&](auto&& f) { ptr = std::make_shared<FloatValue>(f); };
+			auto ffunc = [&](auto&& f) { ptr = boost::make_shared<FloatValue>(f); };
 			rule_float = float_[ffunc];
 		}
 
@@ -184,8 +184,7 @@ namespace client
 			using namespace boost::fusion;
 
 
-			standard_rule rule_float;
-			standard_rule rule_string;
+			
 
 			//standard_rule rule_value = rule_float;
 			
@@ -193,7 +192,7 @@ namespace client
 			{
 				auto ffunc = [](auto& f, auto &c) 
 				{ 
-					at_c<0>(c.attributes) = std::make_shared<FloatValue>(f); 
+					at_c<0>(c.attributes) = std::make_shared<FloatValue>(f);
 				};
 
 				rule_float = float_[ffunc];
@@ -206,18 +205,41 @@ namespace client
 					at_c<0>(c.attributes) = std::make_shared<StringValue>(f);
 				};
 
-				rule<Iterator, std::string()> rule_string_nq = lexeme[+(char_ - ' ')[_val += _1]];
-				rule<Iterator, std::string()> rule_string_q = lexeme['"' >> +(char_ - '"')[_val += _1] >> '"'];
-				rule_string = rule_string_q[func] | rule_string_nq[func];
+				
+				quoted_string %= lexeme['"' >> +(char_ - '"') >> '"'];
+
+				rule_string = quoted_string[func];
+			}
+
+			//array
+			{
+				
+				rule_varray %= '[' >> *rule_value >> ']';
+
+				auto func = [](auto&& f, auto &c)
+				{
+					at_c<0>(c.attributes) = std::make_shared<ArrayValue>(f);
+				};
+				rule_array = rule_varray[func];
 			}
 
 
-			msl = rule_float;
-			
+
+			rule_value = rule_float | rule_array | rule_string;
+			msl = rule_value;
 		}
 
 		standard_rule msl;
 
+		standard_rule rule_value;
+		standard_rule rule_float;
+		standard_rule rule_string;
+		standard_rule rule_array;
+
+
+
+		qi::rule<Iterator, msl::Value::ArrayType(), ascii::space_type> rule_varray;
+		qi::rule<Iterator, std::string()> quoted_string;
 	};
 
 	template <typename Iterator>
@@ -231,6 +253,7 @@ namespace client
 
 		return ast;
 	}
+
 
 
 }
@@ -247,6 +270,19 @@ int main()
 
 	)foo";
 
+
+
+#if 1
+	{
+		std::string str = "34.1";
+		auto p = client::parse_msl(str.begin(), str.end());
+
+
+		std::string strArr = "[34.1 2 \"Test\"]";
+		auto arr = client::parse_msl(strArr.begin(), strArr.end());
+	}
+	
+#else
 	{
 		std::string str = "34.1";
 		auto p = client::parse_msl(str.begin(), str.end());
@@ -261,7 +297,7 @@ int main()
 		std::string str = "\"aaa sa\"das";
 		auto p = client::parse_complex(str.begin(), str.end());
 	}
-
+#endif
 
     return 0;
 }
