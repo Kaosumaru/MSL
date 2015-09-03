@@ -33,3 +33,5 @@ MSLParser/ipch/MSLPARSER-18f4f580/MSLPARSER-19ab9da5.ipch
 MSLParser/MSLParser.opensdf
 MSLParser/ipch/
 MSLParser/MSLParser/x64/Debug/
+MSLParser/Debug/
+*.tlog
