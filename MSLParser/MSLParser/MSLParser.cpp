@@ -50,6 +50,8 @@ namespace msl
 
 		enum class Type { String, Float, Boolean, Null, Array, Map };
 
+		virtual const std::string& name() { static std::string n = ""; return n; };
+
 		virtual float asFloat() { return 0.0f; }
 		virtual const std::string& asString() { static std::string n = "Null"; return n; };
 		virtual const ArrayType& asArray() { throw std::exception(); }
@@ -72,6 +74,23 @@ namespace msl
 	protected:
 		T _value;
 	};
+
+	template<typename T, Value::Type type>
+	class NamedTemplatedValue : public Value
+	{
+	public:
+		using base_type = NamedTemplatedValue<T, type>;
+
+		NamedTemplatedValue() : { _type = type; }
+		NamedTemplatedValue(const std::string& name, const T& t) : _value(t), _name(name) { _type = type; }
+		NamedTemplatedValue(const std::string& name, T&& t) : _value(std::move(t)), _name(name) { _type = type; }
+
+		const std::string& name() override { return _name; };
+	protected:
+		T _value;
+		std::string _name;
+	};
+
 
 	class StringValue : public TemplatedValue<std::string, Value::Type::String>
 	{
@@ -100,6 +119,21 @@ namespace msl
 		using base_type::TemplatedValue;
 		const MapType& asMap() override { return _value; }
 	};
+
+
+	class NamedArrayValue : public NamedTemplatedValue<Value::ArrayType, Value::Type::Array>
+	{
+	public:
+		using base_type::NamedTemplatedValue;
+		const ArrayType& asArray() override { return _value; }
+	};
+
+	class NamedMapValue : public NamedTemplatedValue<Value::MapType, Value::Type::Map>
+	{
+	public:
+		using base_type::NamedTemplatedValue;
+		const MapType& asMap() override { return _value; }
+	};
 };
 
 
@@ -119,11 +153,20 @@ namespace client
 		template<typename Type>
 		auto createAttrSynthesizer()
 		{
-			
 			return [](auto&& f, auto &c)
 			{
 				using namespace boost::fusion;
 				at_c<0>(c.attributes) = std::make_shared<Type>(std::move(f));
+			};
+		}
+
+		template<typename Type>
+		auto createAttrSynthesizerForNamed()
+		{
+			return [](auto&& f, auto &c)
+			{
+				using namespace boost::fusion;
+				at_c<0>(c.attributes) = std::make_shared<Type>(at_c<0>(f), at_c<1>(f));
 			};
 		}
 
@@ -140,7 +183,7 @@ namespace client
 			using ascii::alpha;
 			using ascii::string;
 			using namespace qi::labels;
-			
+			using namespace boost::fusion;
 
 			//float
 			{
@@ -167,8 +210,17 @@ namespace client
 				rule_map = rule_vmap[createAttrSynthesizer<MapValue>()];
 			}
 
+			//named array
+			{
+				rule_named_array = (simple_string >> qi::lit("()") >> rule_varray)[createAttrSynthesizerForNamed<NamedArrayValue>()];
+			}
 
-			rule_value = rule_float | rule_array | rule_map | rule_string;
+			//named map
+			{
+				rule_named_map = (simple_string >> qi::lit("()") >> rule_vmap)[createAttrSynthesizerForNamed<NamedMapValue>()];
+			}
+
+			rule_value = rule_float | rule_array | rule_map | rule_named_array | rule_named_map | rule_string;
 			msl = rule_value;
 		}
 
@@ -180,6 +232,8 @@ namespace client
 		standard_rule rule_array;
 		standard_rule rule_map;
 
+		standard_rule rule_named_array;
+		standard_rule rule_named_map;
 
 		qi::rule<Iterator, msl::Value::MapType(), ascii::space_type> rule_vmap;
 		qi::rule<Iterator, msl::Value::ArrayType(), ascii::space_type> rule_varray;
@@ -219,12 +273,11 @@ int main()
 
 
 #if 1
+
+#ifdef TST_1
 	{
 		std::string str = "34.1";
 		auto p = client::parse_msl(str.begin(), str.end());
-
-
-		//std::string strArr = "[34.1 {1:1 \"Mateusz\":\"Borycki\"} \"Test\"]";
 
 		std::string strArr = R"foo(
 
@@ -242,7 +295,23 @@ int main()
 
 		auto arr = client::parse_msl(strArr.begin(), strArr.end());
 	}
+#endif
 	
+	{
+		std::string strArr = R"foo(
+
+		[
+			Test.1
+			tr()[1 2 3]
+			"Test"
+		]
+
+		)foo";
+
+		auto arr = client::parse_msl(strArr.begin(), strArr.end());
+	}
+
+
 #else
 	{
 		std::string str = "34.1";
