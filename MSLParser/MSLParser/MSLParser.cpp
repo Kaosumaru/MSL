@@ -53,6 +53,7 @@ namespace msl
 
 		virtual const std::string& name() { static std::string n = ""; return n; };
 
+		virtual bool asBool() { return false; }
 		virtual float asFloat() { return 0.0f; }
 		virtual const std::string& asString() { static std::string n = "Null"; return n; };
 		virtual const ArrayType& asArray() { throw std::exception(); }
@@ -92,6 +93,13 @@ namespace msl
 		std::string _name;
 	};
 
+
+	class BoolValue : public TemplatedValue<bool, Value::Type::Boolean>
+	{
+	public:
+		using base_type::TemplatedValue;
+		bool asBool() override { return _value; }
+	};
 
 	class StringValue : public TemplatedValue<std::string, Value::Type::String>
 	{
@@ -213,11 +221,23 @@ namespace client
 			using namespace qi::labels;
 			using namespace boost::fusion;
 
+			//null
+			{
+				auto rule_null_f = [](auto&& f, auto &c) { at_c<0>(c.attributes) = std::make_shared<Value>(); };
+				rule_null = lit("null")[rule_null_f];
+			}
+
+			//bool
+			{
+				auto rule_true_f = [](auto&& f, auto &c){at_c<0>(c.attributes) = std::make_shared<BoolValue>(true);	};
+				auto rule_false_f = [](auto&& f, auto &c) {at_c<0>(c.attributes) = std::make_shared<BoolValue>(false);	};
+				rule_bool = lit("true")[rule_true_f] | lit("false")[rule_false_f];
+			}
+
 			//float
 			{
 				auto percent = [](auto&& f, auto &c)
 				{
-					using namespace boost::fusion;
 					at_c<0>(c.attributes) = std::make_shared<FloatValue>(f / 100.0f);
 				};
 
@@ -254,7 +274,7 @@ namespace client
 				rule_named_map = (simple_string >> qi::lit("()") >> rule_vmap)[createAttrSynthesizerForNamed<NamedMapValue>()];
 			}
 
-			rule_value = rule_float | rule_array | rule_map | rule_named_array | rule_named_map | rule_string;
+			rule_value = rule_float | rule_array | rule_map | rule_named_array | rule_named_map | rule_bool | rule_null | rule_string;
 			msl = rule_value;
 		}
 
@@ -262,6 +282,8 @@ namespace client
 
 		standard_rule rule_value;
 		standard_rule rule_float;
+		standard_rule rule_bool;
+		standard_rule rule_null;
 		standard_rule rule_string;
 		standard_rule rule_array;
 		standard_rule rule_map;
