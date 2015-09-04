@@ -50,6 +50,12 @@ namespace MSLTest
 			Assert::AreEqual(""s, s2->asString());
 		}
 
+		TEST_METHOD(String_Multiline)
+		{
+			auto s = msl::Value::fromString("\"Line1\nLine2\nLine3\"");
+			Assert::AreEqual("Line1\nLine2\nLine3"s, s->asString());
+		}
+
 		TEST_METHOD(String_Array)
 		{
 			auto a = msl::Value::fromString("[aaa bbb \"aaa bbb\"]");
