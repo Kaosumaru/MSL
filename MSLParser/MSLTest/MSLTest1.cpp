@@ -73,12 +73,23 @@ namespace MSLTest
 
 		TEST_METHOD(Array_SimpleParse)
 		{
-			auto a = msl::Value::fromString("[1 2 3]");
-			Assert::AreEqual(3, (int)a->asArray().size());
+			{
+				auto a = msl::Value::fromString("[1 2 3]");
+				Assert::AreEqual(3, (int)a->asArray().size());
 
-			Assert::AreEqual(1.f, a->asArray()[0]->asFloat());
-			Assert::AreEqual(2.f, a->asArray()[1]->asFloat());
-			Assert::AreEqual(3.f, a->asArray()[2]->asFloat());
+				Assert::AreEqual(1.f, a->asArray()[0]->asFloat());
+				Assert::AreEqual(2.f, a->asArray()[1]->asFloat());
+				Assert::AreEqual(3.f, a->asArray()[2]->asFloat());
+			}
+
+			{
+				auto a = msl::Value::fromString("[1, 2, 3]");
+				Assert::AreEqual(3, (int)a->asArray().size());
+
+				Assert::AreEqual(1.f, a->asArray()[0]->asFloat());
+				Assert::AreEqual(2.f, a->asArray()[1]->asFloat());
+				Assert::AreEqual(3.f, a->asArray()[2]->asFloat());
+			}
 		}
 
 		TEST_METHOD(Array_Empty)

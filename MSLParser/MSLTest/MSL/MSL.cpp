@@ -203,7 +203,7 @@ namespace client
 
 			//array
 			{
-				rule_varray %= '[' >> *rule_value >> -lit(',') >> ']';
+				rule_varray %= '[' >> *(rule_value >> -lit(',')) >> ']';
 				rule_array = rule_varray[createAttrSynthesizer<ArrayValue>()];
 			}
 
