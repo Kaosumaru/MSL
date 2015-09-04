@@ -35,11 +35,13 @@ namespace msl
 		using base_type = NamedTemplatedValue<T, type>;
 
 		NamedTemplatedValue() : { _type = type; }
-		NamedTemplatedValue(const std::string& name, const T& t) : _value(t), _name(name) { _type = type; }
-		NamedTemplatedValue(const std::string& name, T&& t) : _value(std::move(t)), _name(name) { _type = type; }
+		NamedTemplatedValue(const std::string& name, const MapType& attr, const T& t) : _attributes(attr), _value(t), _name(name) { _type = type; }
+		NamedTemplatedValue(const std::string& name, MapType&& attr, T&& t) : _attributes(std::move(attr)), _value(std::move(t)), _name(name) { _type = type; }
 
 		const std::string& name() override { return _name; };
+		const MapType& attributes() override { return _attributes; }
 	protected:
+		MapType _attributes;
 		T _value;
 		std::string _name;
 	};
@@ -79,7 +81,6 @@ namespace msl
 		using base_type::TemplatedValue;
 		const MapType& asMap() override { return _value; }
 	};
-
 
 	class NamedArrayValue : public NamedTemplatedValue<Value::ArrayType, Value::Type::Array>
 	{
@@ -150,7 +151,7 @@ namespace client
 			return [](auto&& f, auto &c)
 			{
 				using namespace boost::fusion;
-				at_c<0>(c.attributes) = std::make_shared<Type>(at_c<0>(f), at_c<1>(f));
+				at_c<0>(c.attributes) = std::make_shared<Type>(at_c<0>(f), at_c<1>(f), at_c<2>(f));
 			};
 		}
 
@@ -212,14 +213,17 @@ namespace client
 				rule_map = rule_vmap[createAttrSynthesizer<MapValue>()];
 			}
 
+
+			rule_vattr %= "(" >> *(rule_value >> qi::lit(":") >> rule_value) >> ")";
+
 			//named array
 			{
-				rule_named_array = (simple_string >> qi::lit("()") >> rule_varray)[createAttrSynthesizerForNamed<NamedArrayValue>()];
+				rule_named_array = (simple_string >> rule_vattr >> rule_varray)[createAttrSynthesizerForNamed<NamedArrayValue>()];
 			}
 
 			//named map
 			{
-				rule_named_map = (simple_string >> qi::lit("()") >> rule_vmap)[createAttrSynthesizerForNamed<NamedMapValue>()];
+				rule_named_map = (simple_string >> rule_vattr >> rule_vmap)[createAttrSynthesizerForNamed<NamedMapValue>()];
 			}
 
 			rule_value = rule_float | rule_array | rule_map | rule_named_array | rule_named_map | rule_bool | rule_null | rule_string;
@@ -239,6 +243,7 @@ namespace client
 		standard_rule rule_named_array;
 		standard_rule rule_named_map;
 
+		qi::rule<Iterator, msl::Value::MapType(), skipper<Iterator>> rule_vattr;
 		qi::rule<Iterator, msl::Value::MapType(), skipper<Iterator>> rule_vmap;
 		qi::rule<Iterator, msl::Value::ArrayType(), skipper<Iterator>> rule_varray;
 		qi::rule<Iterator, std::string()> quoted_string;

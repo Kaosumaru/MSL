@@ -16,6 +16,7 @@ namespace msl
 		enum class Type { String, Float, Boolean, Null, Array, Map };
 
 		virtual const std::string& name() { static std::string n = ""; return n; };
+		virtual const MapType& attributes() { throw std::exception(); }
 
 		virtual bool asBool() { return false; }
 		virtual float asFloat() { return 0.0f; }
