@@ -24,7 +24,7 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MSL\MSL.h">
+    <ClInclude Include="..\..\MSL\include\MSL.h">
       <Filter>MSL</Filter>
     </ClInclude>
   </ItemGroup>
@@ -32,11 +32,11 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MSL\MSL.cpp">
-      <Filter>MSL</Filter>
-    </ClCompile>
     <ClCompile Include="MSLTest1.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MSL\src\MSL.cpp">
+      <Filter>MSL</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

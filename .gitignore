@@ -35,3 +35,6 @@ MSLParser/ipch/
 MSLParser/MSLParser/x64/Debug/
 MSLParser/Debug/
 *.tlog
+*.ipch
+MSLParserTest/Debug/MSLTest.exp
+*.opensdf
