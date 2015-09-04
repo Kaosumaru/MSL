@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "CppUnitTest.h"
-#include "MSL.h"
+#include "msl/msl.h"
 
 using namespace std;
 
