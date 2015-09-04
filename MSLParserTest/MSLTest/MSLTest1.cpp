@@ -39,6 +39,8 @@ namespace MSLTest
 			auto s2 = msl::Value::fromString("\"aaa@1\"");
 			Assert::AreEqual("aaa@1"s, s2->asString());
 
+			auto s3 = msl::Value::fromString("&(aaa).1");
+			Assert::AreEqual("&(aaa).1"s, s3->asString());
 		}
 
 		TEST_METHOD(String_Empty)

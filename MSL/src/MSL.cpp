@@ -196,7 +196,7 @@ namespace client
 			//string
 			{
 				quoted_string %= lexeme['"' >> *(char_ - '"') >> '"'];
-				simple_string %= alpha >> *(char_("a-zA-Z0-9\\.\\-"));
+				simple_string %= (alpha | char_('&')) >> *(char_("a-zA-Z0-9\\.\\-\\(\\)"));
 
 				rule_string = (quoted_string | simple_string)[createAttrSynthesizer<StringValue>()];
 			}
