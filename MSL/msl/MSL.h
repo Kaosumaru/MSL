@@ -25,6 +25,8 @@ namespace msl
 		virtual const MapType& asMap() { throw std::exception(); }
 
 		static pointer fromString(const std::string &s);
+
+		auto type() { return _type; }
 	protected:
 		Type _type = Type::Null;
 	};

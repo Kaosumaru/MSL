@@ -14,29 +14,29 @@
 
 namespace msl
 {
-	template<typename T, Value::Type type>
+	template<typename T, Value::Type my_type>
 	class TemplatedValue : public Value
 	{
 	public:
-		using base_type = TemplatedValue<T, type>;
+		using base_type = TemplatedValue<T, my_type>;
 
-		TemplatedValue() : { _type = type; }
-		TemplatedValue(const T& t) : _value(t) { _type = type; }
-		TemplatedValue(T&& t) : _value(std::move(t)) { _type = type; }
+		TemplatedValue() : { _type = my_type; }
+		TemplatedValue(const T& t) : _value(t) { _type = my_type; }
+		TemplatedValue(T&& t) : _value(std::move(t)) { _type = my_type; }
 
 	protected:
 		T _value;
 	};
 
-	template<typename T, Value::Type type>
+	template<typename T, Value::Type my_type>
 	class NamedTemplatedValue : public Value
 	{
 	public:
-		using base_type = NamedTemplatedValue<T, type>;
+		using base_type = NamedTemplatedValue<T, my_type>;
 
-		NamedTemplatedValue() : { _type = type; }
-		NamedTemplatedValue(const std::string& name, const MapType& attr, const T& t) : _attributes(attr), _value(t), _name(name) { _type = type; }
-		NamedTemplatedValue(const std::string& name, MapType&& attr, T&& t) : _attributes(std::move(attr)), _value(std::move(t)), _name(name) { _type = type; }
+		NamedTemplatedValue() : { _type = my_type; }
+		NamedTemplatedValue(const std::string& name, const MapType& attr, const T& t) : _attributes(attr), _value(t), _name(name) { _type = my_type; }
+		NamedTemplatedValue(const std::string& name, MapType&& attr, T&& t) : _attributes(std::move(attr)), _value(std::move(t)), _name(name) { _type = my_type; }
 
 		const std::string& name() override { return _name; };
 		const MapType& attributes() override { return _attributes; }
