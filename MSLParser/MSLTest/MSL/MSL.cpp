@@ -203,18 +203,18 @@ namespace client
 
 			//array
 			{
-				rule_varray %= '[' >> *rule_value >> ']';
+				rule_varray %= '[' >> *rule_value >> -lit(',') >> ']';
 				rule_array = rule_varray[createAttrSynthesizer<ArrayValue>()];
 			}
 
 			//map
 			{
-				rule_vmap %= qi::lit("{") >> *(rule_value >> qi::lit(":") >> rule_value) >> qi::lit("}");
+				rule_vmap %= qi::lit("{") >> *(rule_value >> qi::lit(":") >> rule_value >> -lit(',')) >> qi::lit("}");
 				rule_map = rule_vmap[createAttrSynthesizer<MapValue>()];
 			}
 
 
-			rule_vattr %= "(" >> *(rule_value >> qi::lit(":") >> rule_value) >> ")";
+			rule_vattr %= "(" >> *(rule_value >> qi::lit(":") >> rule_value >> -lit(',')) >> ")";
 
 			//named array
 			{
