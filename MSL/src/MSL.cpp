@@ -47,6 +47,9 @@ namespace msl
 	};
 
 
+
+
+
 	class BoolValue : public TemplatedValue<bool, Value::Type::Boolean>
 	{
 	public:
@@ -94,6 +97,19 @@ namespace msl
 	public:
 		using base_type::NamedTemplatedValue;
 		const MapType& asMap() override { return _value; }
+	};
+
+
+	class NamedNullValue : public Value
+	{
+	public:
+		NamedNullValue(const std::string& name, const MapType& attr) : _attributes(attr), _name(name) { }
+
+		const std::string& name() override { return _name; };
+		const MapType& attributes() override { return _attributes; }
+	protected:
+		MapType _attributes;
+		std::string _name;
 	};
 }
 
@@ -152,6 +168,15 @@ namespace client
 			{
 				using namespace boost::fusion;
 				at_c<0>(c.attributes) = std::make_shared<Type>(at_c<0>(f), at_c<1>(f), at_c<2>(f));
+			};
+		}
+
+		auto createAttrSynthesizerForNamedNull()
+		{
+			return [](auto&& f, auto &c)
+			{
+				using namespace boost::fusion;
+				at_c<0>(c.attributes) = std::make_shared<msl::NamedNullValue>(at_c<0>(f), at_c<1>(f));
 			};
 		}
 
@@ -216,6 +241,11 @@ namespace client
 			named_string %= (alpha) >> *(char_("a-zA-Z0-9\\.\\-"));
 			rule_vattr %= "(" >> *(rule_value >> qi::lit(":") >> rule_value >> -lit(',')) >> ")";
 
+			//named null
+			{
+				rule_named_null = (named_string >> rule_vattr)[createAttrSynthesizerForNamedNull()];
+			}
+
 			//named array
 			{
 				rule_named_array = (named_string >> rule_vattr >> rule_varray)[createAttrSynthesizerForNamed<NamedArrayValue>()];
@@ -226,7 +256,7 @@ namespace client
 				rule_named_map = (named_string >> rule_vattr >> rule_vmap)[createAttrSynthesizerForNamed<NamedMapValue>()];
 			}
 
-			rule_value = rule_float | rule_array | rule_map | rule_named_array | rule_named_map | rule_bool | rule_null | rule_string;
+			rule_value = rule_float | rule_array | rule_map | rule_named_array | rule_named_map | rule_named_null | rule_bool | rule_null | rule_string;
 			msl = rule_value;
 		}
 
@@ -242,6 +272,7 @@ namespace client
 
 		standard_rule rule_named_array;
 		standard_rule rule_named_map;
+		standard_rule rule_named_null;
 
 		qi::rule<Iterator, msl::Value::MapType(), skipper<Iterator>> rule_vattr;
 		qi::rule<Iterator, msl::Value::MapType(), skipper<Iterator>> rule_vmap;
