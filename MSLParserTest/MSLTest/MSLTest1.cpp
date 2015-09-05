@@ -144,4 +144,28 @@ namespace MSLTest
 	};
 
 
+	TEST_CLASS(MSL_Parse_NamedMap)
+	{
+	public:
+
+		TEST_METHOD(NamedMap_SimpleParse)
+		{
+			auto str = R"foo( 
+			Named.Map1()
+			{
+				test: test
+				test1: test1
+			}
+			)foo";
+
+			auto a = msl::Value::fromString(str);
+			Assert::AreEqual(true, a!= nullptr);
+
+		}
+
+
+
+	};
+
+
 }

@@ -213,17 +213,17 @@ namespace client
 				rule_map = rule_vmap[createAttrSynthesizer<MapValue>()];
 			}
 
-
+			named_string %= (alpha) >> *(char_("a-zA-Z0-9\\.\\-"));
 			rule_vattr %= "(" >> *(rule_value >> qi::lit(":") >> rule_value >> -lit(',')) >> ")";
 
 			//named array
 			{
-				rule_named_array = (simple_string >> rule_vattr >> rule_varray)[createAttrSynthesizerForNamed<NamedArrayValue>()];
+				rule_named_array = (named_string >> rule_vattr >> rule_varray)[createAttrSynthesizerForNamed<NamedArrayValue>()];
 			}
 
 			//named map
 			{
-				rule_named_map = (simple_string >> rule_vattr >> rule_vmap)[createAttrSynthesizerForNamed<NamedMapValue>()];
+				rule_named_map = (named_string >> rule_vattr >> rule_vmap)[createAttrSynthesizerForNamed<NamedMapValue>()];
 			}
 
 			rule_value = rule_float | rule_array | rule_map | rule_named_array | rule_named_map | rule_bool | rule_null | rule_string;
@@ -249,6 +249,8 @@ namespace client
 		qi::rule<Iterator, std::string()> quoted_string;
 
 		qi::rule<Iterator, std::string()> simple_string;
+
+		qi::rule<Iterator, std::string()> named_string;
 	};
 
 	template <typename Iterator>
