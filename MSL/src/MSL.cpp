@@ -71,6 +71,13 @@ namespace msl
 		float asFloat() override { return _value; }
 	};
 
+	class PercentValue : public TemplatedValue<float, Value::Type::Percent>
+	{
+	public:
+		using base_type::TemplatedValue;
+		float asFloat() override { return _value; }
+	};
+
 	class ArrayValue : public TemplatedValue<Value::ArrayType, Value::Type::Array>
 	{
 	public:
@@ -212,7 +219,7 @@ namespace client
 			{
 				auto percent = [](auto&& f, auto &c)
 				{
-					at_c<0>(c.attributes) = std::make_shared<FloatValue>(f / 100.0f);
+					at_c<0>(c.attributes) = std::make_shared<PercentValue>(f / 100.0f);
 				};
 
 				rule_float = (float_ >> '%')[percent] | float_[createAttrSynthesizer<FloatValue>()];

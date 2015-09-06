@@ -13,7 +13,7 @@ namespace msl
 		using ArrayType = std::vector<pointer>;
 		using MapType = std::map<pointer, pointer>;
 
-		enum class Type { String, Float, Boolean, Null, Array, Map };
+		enum class Type { String, Float, Boolean, Null, Array, Map, Percent };
 
 		virtual const std::string& name() { static std::string n = ""; return n; };
 		virtual const MapType& attributes() { throw std::exception(); }
