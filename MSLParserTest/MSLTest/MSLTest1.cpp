@@ -163,6 +163,46 @@ namespace MSLTest
 
 		}
 
+		TEST_METHOD(NamedMap_AttrParse)
+		{
+			{
+				auto str = R"foo( 
+			Named.Map1(n:Test)
+			{
+
+			}
+			)foo";
+
+				auto a = msl::Value::fromString(str);
+				Assert::AreEqual(true, a != nullptr);
+			}
+
+			{
+				auto str = R"foo( 
+			Named.Map1(n:&(Test).A)
+			{
+
+								}
+			)foo";
+
+				auto a = msl::Value::fromString(str);
+				Assert::AreEqual(true, a != nullptr);
+			}
+
+			{
+				auto str = R"foo( 
+			Named.Map1(n:&Test.A)
+			{
+
+													}
+			)foo";
+
+				auto a = msl::Value::fromString(str);
+				Assert::AreEqual(true, a != nullptr);
+			}
+
+		}
+
 
 
 	};
