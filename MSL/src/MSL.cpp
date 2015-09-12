@@ -227,12 +227,10 @@ namespace client
 
 			//string
 			{
-				auto &simple = *(char_(R"foo(a-zA-Z0-9\.\-\/\\)foo"));
 				quoted_string %= lexeme['"' >> *(char_ - '"') >> '"'];
-				simple_string %= (alpha | char_('&')) >> simple;
-				pointer_string %= char_('&') >> char_('(') >> simple >> char_(')') >> simple; //this is our hack to language
+				simple_string %= (alpha | char_('&')) >> *(char_(R"foo(a-zA-Z0-9\.\-\(\)\\\/)foo"));
 
-				rule_string = (quoted_string | pointer_string | simple_string)[createAttrSynthesizer<StringValue>()];
+				rule_string = (quoted_string | simple_string)[createAttrSynthesizer<StringValue>()];
 			}
 
 			//array
@@ -286,10 +284,9 @@ namespace client
 		qi::rule<Iterator, msl::Value::MapType(), skipper<Iterator>> rule_vattr;
 		qi::rule<Iterator, msl::Value::MapType(), skipper<Iterator>> rule_vmap;
 		qi::rule<Iterator, msl::Value::ArrayType(), skipper<Iterator>> rule_varray;
-		
 		qi::rule<Iterator, std::string()> quoted_string;
+
 		qi::rule<Iterator, std::string()> simple_string;
-		qi::rule<Iterator, std::string()> pointer_string; //this is our hack to language
 
 		qi::rule<Iterator, std::string()> named_string;
 	};
@@ -309,7 +306,6 @@ namespace client
 		skipper<Iterator> skipper;
 
 		bool r = phrase_parse(first, last, msl, skipper, ast);
-
 		if (first != last)
 			return nullptr;
 
