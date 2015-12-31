@@ -41,6 +41,9 @@ namespace MSLTest
 
 			auto s3 = msl::Value::fromString("&(aaa).1");
 			Assert::AreEqual("&(aaa).1"s, s3->asString());
+
+			auto s4 = msl::Value::fromString("x_x");
+			Assert::AreEqual("x_x"s, s4->asString());
 		}
 
 		TEST_METHOD(String_Empty)
@@ -167,7 +170,7 @@ namespace MSLTest
 		{
 			{
 				auto str = R"foo( 
-			Named.Map1(n:Test)
+			Named.Map1( n:Test )
 			{
 
 			}
@@ -179,7 +182,7 @@ namespace MSLTest
 
 			{
 				auto str = R"foo( 
-			Named.Map1(n:&(Test).A)
+			Named.Map1( n:&(Test).A )
 			{
 
 								}
@@ -191,7 +194,7 @@ namespace MSLTest
 
 			{
 				auto str = R"foo( 
-			Named.Map1(n:&Test.A)
+			Named.Map1( n:&Test.A )
 			{
 
 													}

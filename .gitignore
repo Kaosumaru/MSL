@@ -38,3 +38,4 @@ MSLParser/Debug/
 *.ipch
 MSLParserTest/Debug/MSLTest.exp
 *.opensdf
+MSLParserTest/MSLParser.VC.opendb
