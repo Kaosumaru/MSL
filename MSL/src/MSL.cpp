@@ -147,6 +147,26 @@ namespace client
 		qi::rule<Iterator> start;
 	};
 
+	template <typename T>
+	struct ts_real_policies : boost::spirit::qi::real_policies<T>
+	{
+
+		//don't parse Inf as infinity
+		template <typename Iterator, typename Attribute>
+		static bool
+			parse_inf(Iterator& first, Iterator const& last, Attribute& attr)
+		{
+			return false;
+		}
+
+		//don't parse Nan as nan
+		template <typename Iterator, typename Attribute>
+		static bool
+			parse_nan(Iterator& first, Iterator const& last, Attribute& attr)
+		{
+			return false;
+		}
+	};
 
 
 
@@ -217,18 +237,20 @@ namespace client
 
 			//float
 			{
+				boost::spirit::qi::real_parser<float, ts_real_policies<float> > my_float;
+
 				auto percent = [](auto&& f, auto &c)
 				{
 					at_c<0>(c.attributes) = std::make_shared<PercentValue>(f / 100.0f);
 				};
 
-				rule_float = (float_ >> '%')[percent] | float_[createAttrSynthesizer<FloatValue>()];
+				rule_float = (my_float >> '%')[percent] | my_float[createAttrSynthesizer<FloatValue>()];
 			}
 
 			//string
 			{
 				quoted_string %= lexeme['"' >> *(char_ - '"') >> '"'];
-				simple_string %= (alpha | char_('&')) >> *(char_(R"foo(a-zA-Z0-9\.\-\(\)\\\/\_)foo"));
+				simple_string %= (alpha | char_('&')) >> *(char_(R"foo(a-zA-Z0-9\!\.\-\(\)\\\/\_)foo"));
 
 				rule_string = (quoted_string | simple_string)[createAttrSynthesizer<StringValue>()];
 			}
