@@ -631,17 +631,30 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
       }
     };
 
-
+#if 0
    //named value
    struct named_value_state
          : public result_state
    {
        msl::Value::MapType attr;
        std::string name;
+       msl::Value::pointer key;
 
       void success( result_state & in_result )
       {
          in_result.result = std::make_shared<msl::NamedNullValue>(name, attr);
+      }
+
+      void insert_key()
+      {
+          key = result;
+      }
+
+      void insert_value()
+      {
+        attr[key] = result;
+        key.reset();
+        result.reset();
       }
    };
 
@@ -657,6 +670,36 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
       }
    };
 
+   template<>
+   struct named_value_action< pegtl::msl::name_separator >
+   {
+      template< typename Input >
+      static void apply( const Input &, named_value_state & result )
+      {
+         result.insert_key();
+      }
+    };
+
+   template<>
+   struct named_value_action< pegtl::msl::value_separator >
+   {
+      template< typename Input >
+      static void apply( const Input &, named_value_state & result )
+      {
+         result.insert_value();
+      }
+    };
+
+   template<>
+   struct named_value_action< pegtl::msl::begin_attr >
+   {
+      template< typename Input >
+      static void apply( const Input &, named_value_state & result )
+      {
+        
+      }
+   };
+#endif
 
    template< typename Rule > struct control : public pegtl::normal< Rule > {};  // Inherit from json_errors.hh.
 
@@ -664,7 +707,7 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
    template<> struct control< pegtl::msl::string::content > : pegtl::change_state< pegtl::msl::string::content, string_state > {};
    template<> struct control< pegtl::msl::array::content > : pegtl::change_state_and_action< pegtl::msl::array::content, array_state, array_action > {};
    template<> struct control< pegtl::msl::object::content > : pegtl::change_state_and_action< pegtl::msl::object::content, object_state, object_action > {};
-   template<> struct control< pegtl::msl::named_value > : pegtl::change_state_and_action< pegtl::msl::named_value, named_value_state, named_value_action > {};
+   //template<> struct control< pegtl::msl::named_value > : pegtl::change_state_and_action< pegtl::msl::named_value, named_value_state, named_value_action > {};
 
    struct grammar : pegtl::must< pegtl::msl::text, pegtl::eof > {};
 
@@ -673,7 +716,7 @@ msl::Value::pointer msl::Value::fromString(const std::string &str)
 {
     //std::string tst = "[1 test \"test2\" ]";
     //std::string tst = "{ 2: test() }";
-    std::string tst = "test()";
+    std::string tst = "test( a:1 )";
     result_state result;
     //pegtl::parse_string(tst).parse< grammar, pegtl::nothing, control >( result );
     //pegtl::parse_string<grammar, value_action>( tst, "test", result );
