@@ -1,5 +1,6 @@
 #include "msl/msl.h"
 
+#if 0
 #define BOOST_RESULT_OF_USE_DECLTYPE
 #define BOOST_SPIRIT_USE_PHOENIX_V3
 #include <boost/config/warning_disable.hpp>
@@ -10,7 +11,13 @@
 #include <boost/make_shared.hpp>
 #include <boost/fusion/include/std_pair.hpp>
 #include <boost/spirit/repository/include/qi_confix.hpp>
+#endif
 
+#include <pegtl.hh>
+#include <pegtl/contrib/abnf.hh>
+#include <pegtl/contrib/unescape.hh>
+#include <pegtl/contrib/changes.hh>
+#include <pegtl/contrib/raw_string.hh>
 
 namespace msl
 {
@@ -120,7 +127,7 @@ namespace msl
 	};
 }
 
-
+#if 0
 namespace client
 {
 	namespace qi = boost::spirit::qi;
@@ -250,7 +257,7 @@ namespace client
 			//string
 			{
 				quoted_string %= lexeme['"' >> *(char_ - '"') >> '"'];
-				simple_string %= (alpha | char_('&')) >> *(char_(R"foo(a-zA-Z0-9\!\.\-\(\)\\\/\_)foo"));
+				simple_string %= (alpha | char_('&')) >> *(char_(R"foo(a-zA-Z0-9\!\.\-\(\)\\\/\_)foo")); //a-zA-Z0-9  !.-()\/_
 
 				rule_string = (quoted_string | simple_string)[createAttrSynthesizer<StringValue>()];
 			}
@@ -337,9 +344,279 @@ namespace client
 
 
 }
+#endif
+
+namespace pegtl
+{
+namespace msl
+{
+
+    //struct ws : one< ' ', '\t', '\n', '\r' > {};
+
+    struct comment : disable< pegtl_string_t( "/*" ), pegtl::until< pegtl_string_t( "*/" ) > > {};
+
+    struct sep : sor< pegtl::ascii::space, comment > {};
+    struct ws : sor<sep, one< '\t', '\n', '\r' >> {};
+
+
+    template< typename R, typename P = ws > struct padr : internal::seq< R, internal::star< P > > {};
+
+    struct begin_array : padr< one< '[' > > {};
+    struct begin_object : padr< one< '{' > > {};
+    struct end_array : one< ']' > {};
+    struct end_object : one< '}' > {};
+    struct name_separator : pad< one< ':' >, ws > {};
+    struct value_separator : padr< opt<one< ',' >> > {}; //separator is a , or a white space
+
+    struct false_ : pegtl_string_t( "false" ) {};
+    struct null : pegtl_string_t( "null" ) {};
+    struct true_ : pegtl_string_t( "true" ) {};
+
+    //number
+    struct digits : plus< abnf::DIGIT > {};
+    struct exp : seq< one< 'e', 'E' >, opt< one< '-', '+'> >, must< digits > > {};
+    struct frac : if_must< one< '.' >, digits > {};
+    struct int_ : sor< one< '0' >, digits > {};
+    struct number : seq< opt< one< '-' > >, int_, opt< frac >, opt< exp > > {};
+
+    //string
+    struct xdigit : abnf::HEXDIG {};
+    struct unicode : list< seq< one< 'u' >, rep< 4, must< xdigit > > >, one< '\\' > > {};
+    struct escaped_char : one< '"', '\\', '/', 'b', 'f', 'n', 'r', 't' > {};
+    struct escaped : sor< escaped_char, unicode > {};
+    struct unescaped : utf8::range< 0x20, 0x10FFFF > {};
+    struct char_ : if_then_else< one< '\\' >, must< escaped >, unescaped > {};
+
+    struct string_content : until< at< one< '"' > >, must< char_ > > {};
+    struct string : seq< one< '"' >, must< string_content >, any >
+    {
+        using content = string_content;
+    };
+
+    //simplestring
+    struct simplestringchar : sor<alnum, one<'!','.','-','(',')','\\','/','_'>> {};
+    struct simplestringchar_prefix : sor<alnum, one<'&'>> {};
+
+    struct simplestring : seq< simplestringchar_prefix , star< simplestringchar >>
+    {
+    };
+
+    //array
+    struct array_element;
+    struct array_content : opt< list< array_element, value_separator > > {};
+    struct array : seq< begin_array, array_content, must< end_array > >
+    {
+        using begin = begin_array;
+        using end = end_array;
+        using element = array_element;
+        using content = array_content;
+    };
+
+    //object
+    struct value;
+    struct member : if_must< value, name_separator, value > {};
+    struct object_content : opt< list_must< member, value_separator > > {};
+    struct object : seq< begin_object, object_content, must< end_object > >
+    {
+        using begin = begin_object;
+        using end = end_object;
+        using element = member;
+        using content = object_content;
+    };
+
+    struct value : padr< sor< string, simplestring, number, array, object, false_, true_, null > > {};
+    struct array_element : seq< value > {};
+    //struct value : padr< sor< string, number, object, array, false_, true_, null > > {};
+
+    struct text : seq< star< ws >, value > {};
+}
+}
+
+
+struct unescape_state_base
+{
+    unescape_state_base() = default;
+
+    unescape_state_base( const unescape_state_base & ) = delete;
+    void operator= ( const unescape_state_base & ) = delete;
+
+    std::string unescaped;
+};
+
+// Action class for parsing literal strings, uses the PEGTL unescape utilities, cf. unescape.cc.
+
+template< typename Rule, template< typename ... > class Base = pegtl::nothing >
+struct unescape_action : Base< Rule > {};
+
+template<> struct unescape_action< pegtl::msl::unicode > : pegtl::unescape::unescape_j {};
+template<> struct unescape_action< pegtl::msl::escaped_char > : pegtl::unescape::unescape_c< pegtl::msl::escaped_char, '"', '\\', '/', '\b', '\f', '\n', '\r', '\t' > {};
+template<> struct unescape_action< pegtl::msl::unescaped > : pegtl::unescape::append_all {};
+
+
+struct result_state
+{
+    result_state() = default;
+
+    result_state( const result_state & ) = delete;
+    void operator= ( const result_state & ) = delete;
+
+    msl::Value::pointer result;
+};
+
+
+template< typename Rule > struct value_action : unescape_action< Rule > {};
+
+
+
+   struct string_state
+         : public unescape_state_base
+   {
+      void success( result_state & result )
+      {
+         result.result = std::make_shared< msl::StringValue >( std::move( unescaped ) );
+      }
+   };
+
+   template<>
+   struct value_action< pegtl::msl::simplestring >
+   {
+      template< typename Input >
+      static void apply( const Input & in, result_state & result )
+      {
+         result.result = std::make_shared< msl::StringValue >( in.string() ); 
+      }
+   };
+
+   template<>
+   struct value_action< pegtl::msl::null >
+   {
+      template< typename Input >
+      static void apply( const Input &, result_state & result )
+      {
+         result.result = std::make_shared< msl::Value >();
+      }
+   };
+
+   template<>
+   struct value_action< pegtl::msl::true_ >
+   {
+      template< typename Input >
+      static void apply( const Input &, result_state & result )
+      {
+         result.result = std::make_shared< msl::BoolValue >( true );
+      }
+   };
+
+   template<>
+   struct value_action< pegtl::msl::false_ >
+   {
+      template< typename Input >
+      static void apply( const Input &, result_state & result )
+      {
+         result.result = std::make_shared< msl::BoolValue >( false );
+      }
+   };
+
+   template<>
+   struct value_action< pegtl::msl::number >
+   {
+      template< typename Input >
+      static void apply( const Input & in, result_state & result )
+      {
+         result.result = std::make_shared< msl::FloatValue >( std::stof( in.string() ) );  // NOTE: stold() is not quite correct for JSON but we'll use it for this simple example.
+      }
+   };
+
+   // State and action classes to accumulate the data for a JSON array.
+
+   struct array_state
+         : public result_state
+   {
+      std::vector< msl::Value::pointer > array;
+
+      void push_back()
+      {
+         array.push_back( std::move( result ) );
+         result.reset();
+      }
+
+      void success( result_state & in_result )
+      {
+         if ( this->result ) {
+            push_back();
+         }
+         in_result.result = std::make_shared<msl::ArrayValue>(std::move(array));
+      }
+   };
+
+   template< typename Rule > struct array_action : pegtl::nothing< Rule > {};
+
+   template<>
+   struct array_action< pegtl::msl::value_separator >
+   {
+      template< typename Input >
+      static void apply( const Input &, array_state & result )
+      {
+         result.push_back();
+      }
+    };
+
+
+   // State and action classes to accumulate the data for a JSON object.
+
+   struct object_state
+         : public result_state
+   {
+      msl::Value::MapType object;
+
+      void insert()
+      {
+          //object
+        //auto key = 
+         //object->data.insert( std::make_pair( std::move( unescaped ), std::move( result ) ) );
+         //unescaped.clear();
+         result.reset();
+      }
+
+      void success( result_state & in_result )
+      {
+         if ( this->result ) {
+            insert();
+         }
+         in_result.result = std::make_shared<msl::MapValue>(std::move(object));
+      }
+   };
+
+   template< typename Rule > struct object_action : unescape_action< Rule > {};
+
+   template<>
+   struct object_action< pegtl::msl::value_separator >
+   {
+      template< typename Input >
+      static void apply( const Input &, object_state & result )
+      {
+         result.insert();
+      }
+};
+
+   template< typename Rule > struct control : public pegtl::normal< Rule > {};  // Inherit from json_errors.hh.
+
+   template<> struct control< pegtl::msl::value > : pegtl::change_action< pegtl::msl::value, value_action > {};
+   template<> struct control< pegtl::msl::string::content > : pegtl::change_state< pegtl::msl::string::content, string_state > {};
+   template<> struct control< pegtl::msl::array::content > : pegtl::change_state_and_action< pegtl::msl::array::content, array_state, array_action > {};
+   template<> struct control< pegtl::msl::object::content > : pegtl::change_state_and_action< pegtl::msl::object::content, object_state, object_action > {};
+
+   struct grammar : pegtl::must< pegtl::msl::text, pegtl::eof > {};
 
 
 msl::Value::pointer msl::Value::fromString(const std::string &str)
 {
-	return client::parse_msl(str.begin(), str.end());
+    //std::string tst = "[1 test \"test2\" ]";
+    std::string tst = "{a:1}";
+    result_state result;
+    //pegtl::parse_string(tst).parse< grammar, pegtl::nothing, control >( result );
+    //pegtl::parse_string<grammar, value_action>( tst, "test", result );
+    pegtl::parse_string<grammar, value_action, control>( tst, "test", result );
+    return nullptr;
+	//return client::parse_msl(str.begin(), str.end());
 }
