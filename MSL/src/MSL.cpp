@@ -362,9 +362,11 @@ namespace msl
     template< typename R, typename P = ws > struct padr : internal::seq< R, internal::star< P > > {};
 
     struct begin_array : padr< one< '[' > > {};
-    struct begin_object : padr< one< '{' > > {};
     struct end_array : one< ']' > {};
+    struct begin_object : padr< one< '{' > > {};
     struct end_object : one< '}' > {};
+    struct begin_attr : padr< one< '(' > > {};
+    struct end_attr : one< ')' > {};
     struct name_separator : pad< one< ':' >, ws > {};
     struct value_separator : padr< opt<one< ',' >> > {}; //separator is a , or a white space
 
@@ -394,7 +396,7 @@ namespace msl
     };
 
     //simplestring
-    struct simplestringchar : sor<alnum, one<'!','.','-','(',')','\\','/','_'>> {};
+    struct simplestringchar : sor<alnum, one<'!','.','-','<','>','\\','/','_'>> {};
     struct simplestringchar_prefix : sor<alnum, one<'&'>> {};
 
     struct simplestring : seq< simplestringchar_prefix , star< simplestringchar >>
@@ -414,8 +416,9 @@ namespace msl
 
     //object
     struct value;
+    struct key : padr< sor< string, simplestring, number, false_, true_, null > > {};
     struct member : if_must< value, name_separator, value > {};
-    struct object_content : opt< list_must< member, value_separator > > {};
+    struct object_content : opt< list< member, value_separator > > {};
     struct object : seq< begin_object, object_content, must< end_object > >
     {
         using begin = begin_object;
@@ -424,7 +427,22 @@ namespace msl
         using content = object_content;
     };
 
-    struct value : padr< sor< string, simplestring, number, array, object, false_, true_, null > > {};
+
+    //attr array
+    struct attributes : seq< begin_attr, object_content, must< end_attr > >
+    {
+        using begin = begin_attr;
+        using end = end_attr;
+        using element = member;
+        using content = object_content;
+    };
+
+    //named array/object/null
+    struct named_value_name : seq< simplestring, attributes> {};
+    struct named_value_type : sor< object, array> {};
+    struct named_value : seq< named_value_name, opt<named_value_type> > {};
+
+    struct value : padr< sor< named_value, string, number, simplestring, array, object, false_, true_, null > > {};
     struct array_element : seq< value > {};
     //struct value : padr< sor< string, number, object, array, false_, true_, null > > {};
 
@@ -563,19 +581,23 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
 
 
    // State and action classes to accumulate the data for a JSON object.
-
    struct object_state
          : public result_state
    {
       msl::Value::MapType object;
+      msl::Value::pointer key;
+
+
+      void insert_key()
+      {
+          key = result;
+      }
 
       void insert()
       {
-          //object
-        //auto key = 
-         //object->data.insert( std::make_pair( std::move( unescaped ), std::move( result ) ) );
-         //unescaped.clear();
-         result.reset();
+        object[key] = result;
+        key.reset();
+        result.reset();
       }
 
       void success( result_state & in_result )
@@ -590,6 +612,16 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
    template< typename Rule > struct object_action : unescape_action< Rule > {};
 
    template<>
+   struct object_action< pegtl::msl::name_separator >
+   {
+      template< typename Input >
+      static void apply( const Input &, object_state & result )
+      {
+         result.insert_key();
+      }
+    };
+
+   template<>
    struct object_action< pegtl::msl::value_separator >
    {
       template< typename Input >
@@ -597,7 +629,34 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
       {
          result.insert();
       }
-};
+    };
+
+
+   //named value
+   struct named_value_state
+         : public result_state
+   {
+       msl::Value::MapType attr;
+       std::string name;
+
+      void success( result_state & in_result )
+      {
+         in_result.result = std::make_shared<msl::NamedNullValue>(name, attr);
+      }
+   };
+
+   template< typename Rule > struct named_value_action : pegtl::nothing< Rule > {};
+
+   template<>
+   struct named_value_action< pegtl::msl::simplestring >
+   {
+      template< typename Input >
+      static void apply( const Input & in, named_value_state & result )
+      {
+         result.name = in.string(); 
+      }
+   };
+
 
    template< typename Rule > struct control : public pegtl::normal< Rule > {};  // Inherit from json_errors.hh.
 
@@ -605,6 +664,7 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
    template<> struct control< pegtl::msl::string::content > : pegtl::change_state< pegtl::msl::string::content, string_state > {};
    template<> struct control< pegtl::msl::array::content > : pegtl::change_state_and_action< pegtl::msl::array::content, array_state, array_action > {};
    template<> struct control< pegtl::msl::object::content > : pegtl::change_state_and_action< pegtl::msl::object::content, object_state, object_action > {};
+   template<> struct control< pegtl::msl::named_value > : pegtl::change_state_and_action< pegtl::msl::named_value, named_value_state, named_value_action > {};
 
    struct grammar : pegtl::must< pegtl::msl::text, pegtl::eof > {};
 
@@ -612,11 +672,19 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
 msl::Value::pointer msl::Value::fromString(const std::string &str)
 {
     //std::string tst = "[1 test \"test2\" ]";
-    std::string tst = "{a:1}";
+    //std::string tst = "{ 2: test() }";
+    std::string tst = "test()";
     result_state result;
     //pegtl::parse_string(tst).parse< grammar, pegtl::nothing, control >( result );
     //pegtl::parse_string<grammar, value_action>( tst, "test", result );
-    pegtl::parse_string<grammar, value_action, control>( tst, "test", result );
-    return nullptr;
-	//return client::parse_msl(str.begin(), str.end());
+    try
+    {
+        pegtl::parse_string<grammar, value_action, control>( tst, "test", result );
+    }
+    catch ( ... )
+    {
+        return nullptr;
+    }
+    
+    return result.result;
 }
