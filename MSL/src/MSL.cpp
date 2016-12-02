@@ -416,7 +416,6 @@ namespace msl
 
     //object
     struct value;
-    struct key : padr< sor< string, simplestring, number, false_, true_, null > > {};
     struct member : if_must< value, name_separator, value > {};
     struct object_content : opt< list< member, value_separator > > {};
     struct object : seq< begin_object, object_content, must< end_object > >
@@ -429,12 +428,13 @@ namespace msl
 
 
     //attr array
-    struct attributes : seq< begin_attr, object_content, must< end_attr > >
+	struct attributes_content : opt< list< member, value_separator > > {};
+    struct attributes : seq< begin_attr, attributes_content, must< end_attr > >
     {
         using begin = begin_attr;
         using end = end_attr;
         using element = member;
-        using content = object_content;
+        using content = attributes_content;
     };
 
     //named array/object/null
@@ -631,7 +631,7 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
       }
     };
 
-#if 0
+
    //named value
    struct named_value_state
          : public result_state
@@ -669,14 +669,14 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
          result.name = in.string(); 
       }
    };
-
+#if 0
    template<>
    struct named_value_action< pegtl::msl::name_separator >
    {
       template< typename Input >
       static void apply( const Input &, named_value_state & result )
       {
-         result.insert_key();
+         
       }
     };
 
@@ -686,20 +686,44 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
       template< typename Input >
       static void apply( const Input &, named_value_state & result )
       {
-         result.insert_value();
+         
       }
     };
-
    template<>
    struct named_value_action< pegtl::msl::begin_attr >
    {
-      template< typename Input >
-      static void apply( const Input &, named_value_state & result )
-      {
-        
-      }
+	   template< typename Input >
+	   static void apply( const Input &, named_value_state & result )
+	   {
+
+	   }
    };
 #endif
+
+
+
+   template< typename Rule > struct attribute_action : pegtl::nothing< Rule > {};
+
+   template<>
+   struct attribute_action< pegtl::msl::name_separator >
+   {
+	   template< typename Input >
+	   static void apply( const Input &, named_value_state & result )
+	   {
+		   result.insert_key();
+	   }
+   };
+
+   template<>
+   struct attribute_action< pegtl::msl::value_separator >
+   {
+	   template< typename Input >
+	   static void apply( const Input &, named_value_state & result )
+	   {
+		   result.insert_value();
+	   }
+   };
+
 
    template< typename Rule > struct control : public pegtl::normal< Rule > {};  // Inherit from json_errors.hh.
 
@@ -707,7 +731,8 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
    template<> struct control< pegtl::msl::string::content > : pegtl::change_state< pegtl::msl::string::content, string_state > {};
    template<> struct control< pegtl::msl::array::content > : pegtl::change_state_and_action< pegtl::msl::array::content, array_state, array_action > {};
    template<> struct control< pegtl::msl::object::content > : pegtl::change_state_and_action< pegtl::msl::object::content, object_state, object_action > {};
-   //template<> struct control< pegtl::msl::named_value > : pegtl::change_state_and_action< pegtl::msl::named_value, named_value_state, named_value_action > {};
+   template<> struct control< pegtl::msl::named_value > : pegtl::change_state_and_action< pegtl::msl::named_value, named_value_state, named_value_action > {};
+   template<> struct control< pegtl::msl::attributes::content > : pegtl::change_action< pegtl::msl::attributes::content, attribute_action > {};
 
    struct grammar : pegtl::must< pegtl::msl::text, pegtl::eof > {};
 
