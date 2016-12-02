@@ -89,28 +89,28 @@ namespace msl
 	{
 	public:
 		using base_type::TemplatedValue;
-		const ArrayType& asArray() override { return _value; }
+		ArrayType& asArray() override { return _value; }
 	};
 
 	class MapValue : public TemplatedValue<Value::MapType, Value::Type::Map>
 	{
 	public:
 		using base_type::TemplatedValue;
-		const MapType& asMap() override { return _value; }
+		MapType& asMap() override { return _value; }
 	};
 
 	class NamedArrayValue : public NamedTemplatedValue<Value::ArrayType, Value::Type::Array>
 	{
 	public:
 		using base_type::NamedTemplatedValue;
-		const ArrayType& asArray() override { return _value; }
+		ArrayType& asArray() override { return _value; }
 	};
 
 	class NamedMapValue : public NamedTemplatedValue<Value::MapType, Value::Type::Map>
 	{
 	public:
 		using base_type::NamedTemplatedValue;
-		const MapType& asMap() override { return _value; }
+		MapType& asMap() override { return _value; }
 	};
 
 
@@ -639,23 +639,42 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
        msl::Value::MapType attr;
        std::string name;
        msl::Value::pointer key;
+	   msl::Value::pointer type;
 
-      void success( result_state & in_result )
-      {
-         in_result.result = std::make_shared<msl::NamedNullValue>(name, attr);
-      }
+	void success( result_state & in_result )
+	{
+		if (!type)
+			in_result.result = std::make_shared<msl::NamedNullValue>(name, attr);
+		else if (type->type() == msl::Value::Type::Map)
+		{
+			in_result.result = std::make_shared<msl::NamedMapValue>(name, attr, std::move(type->asMap()));
+		}
+		else
+		{
+			in_result.result = std::make_shared<msl::NamedArrayValue>(name, attr, std::move(type->asArray()));
+		}
 
-      void insert_key()
-      {
-          key = result;
-      }
+		type.reset();
+	}
 
-      void insert_value()
-      {
-        attr[key] = result;
-        key.reset();
-        result.reset();
-      }
+	void insert_key()
+	{
+		key = result;
+		result.reset();
+		key.reset();
+	}
+
+	void insert_value()
+	{
+		attr[key] = result;
+		key.reset();
+		result.reset();
+	}
+
+	void insert_type()
+	{
+		type = result;
+	}
    };
 
    template< typename Rule > struct named_value_action : pegtl::nothing< Rule > {};
@@ -668,6 +687,16 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
       {
          result.name = in.string(); 
       }
+   };
+
+   template<>
+   struct named_value_action< pegtl::msl::named_value_type >
+   {
+	   template< typename Input >
+	   static void apply( const Input &, named_value_state & result )
+	   {
+		   result.insert_type();
+	   }
    };
 #if 0
    template<>
@@ -725,6 +754,7 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
    };
 
 
+
    template< typename Rule > struct control : public pegtl::normal< Rule > {};  // Inherit from json_errors.hh.
 
    template<> struct control< pegtl::msl::value > : pegtl::change_action< pegtl::msl::value, value_action > {};
@@ -741,13 +771,11 @@ msl::Value::pointer msl::Value::fromString(const std::string &str)
 {
     //std::string tst = "[1 test \"test2\" ]";
     //std::string tst = "{ 2: test() }";
-    std::string tst = "test( a:1 )";
+    //std::string tst = "test( a:1 )[]";
     result_state result;
-    //pegtl::parse_string(tst).parse< grammar, pegtl::nothing, control >( result );
-    //pegtl::parse_string<grammar, value_action>( tst, "test", result );
     try
     {
-        pegtl::parse_string<grammar, value_action, control>( tst, "test", result );
+        pegtl::parse_string<grammar, value_action, control>( str, "test", result );
     }
     catch ( ... )
     {

@@ -21,8 +21,8 @@ namespace msl
 		virtual bool asBool() { return false; }
 		virtual float asFloat() { return 0.0f; }
 		virtual const std::string& asString() { static std::string n = "Null"; return n; };
-		virtual const ArrayType& asArray() { throw std::exception(); }
-		virtual const MapType& asMap() { throw std::exception(); }
+		virtual ArrayType& asArray() { throw std::exception(); }
+		virtual MapType& asMap() { throw std::exception(); }
 
 		static pointer fromString(const std::string &s);
 
