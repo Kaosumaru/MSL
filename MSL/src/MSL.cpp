@@ -438,8 +438,8 @@ namespace msl
     };
 
     //named array/object/null
-    struct named_value_name : seq< simplestring, attributes> {};
-    struct named_value_type : sor< object, array> {};
+    struct named_value_name : padr<seq< simplestring, attributes>> {};
+    struct named_value_type : padr<sor< object, array>> {};
     struct named_value : seq< named_value_name, opt<named_value_type> > {};
 
     struct value : padr< sor< named_value, string, number, simplestring, array, object, false_, true_, null > > {};
