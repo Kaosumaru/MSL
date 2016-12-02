@@ -36,8 +36,6 @@ add_library(MSL ${SRCS})
 
 ##dependencies
 
-find_package(Boost REQUIRED)
-include_directories( ${Boost_INCLUDE_DIRS} )
 include_directories( ${PROJECT_SOURCE_DIR} )
 include_directories( ${PROJECT_SOURCE_DIR}/../deps/PEGTL )
 ##find_package(allegro REQUIRED)
