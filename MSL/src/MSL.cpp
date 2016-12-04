@@ -444,7 +444,6 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
 	{
 		key = result;
 		result.reset();
-		key.reset();
 	}
 
 	void insert_value()
