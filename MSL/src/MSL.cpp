@@ -134,7 +134,9 @@ namespace msl
 
     //struct ws : one< ' ', '\t', '\n', '\r' > {};
 
-    struct comment : disable< pegtl_string_t( "/*" ), pegtl::until< pegtl_string_t( "*/" ) > > {};
+	struct singleline_comment : disable< pegtl_string_t( "//" ), pegtl::until< one< '\n' > > > {};
+	struct multiline_comment : disable< pegtl_string_t( "/*" ), pegtl::until< pegtl_string_t( "*/" ) > > {};
+	struct comment : sor<multiline_comment, singleline_comment> {};
 
     struct sep : sor< pegtl::ascii::space, comment > {};
     struct ws : sor<sep, one< '\t', '\n', '\r' >> {};
