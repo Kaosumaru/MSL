@@ -134,7 +134,9 @@ namespace msl
 
     //struct ws : one< ' ', '\t', '\n', '\r' > {};
 
-    struct comment : disable< pegtl_string_t( "/*" ), pegtl::until< pegtl_string_t( "*/" ) > > {};
+	struct singleline_comment : disable< pegtl_string_t( "//" ), pegtl::until< one< '\n' > > > {};
+	struct multiline_comment : disable< pegtl_string_t( "/*" ), pegtl::until< pegtl_string_t( "*/" ) > > {};
+	struct comment : sor<multiline_comment, singleline_comment> {};
 
     struct sep : sor< pegtl::ascii::space, comment > {};
     struct ws : sor<sep, one< '\t', '\n', '\r' >> {};
@@ -223,7 +225,7 @@ namespace msl
     struct named_value_type : padr<sor< object, array>> {};
     struct named_value : seq< named_value_name, opt<named_value_type> > {};
 
-    struct value : padr< sor< named_value, string, number, simplestring, array, object, false_, true_, null > > {};
+    struct value : padr< sor< false_, true_, named_value, string, number, simplestring, array, object, null > > {};
     struct array_element : seq< value > {};
     //struct value : padr< sor< string, number, object, array, false_, true_, null > > {};
 
@@ -442,7 +444,6 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
 	{
 		key = result;
 		result.reset();
-		key.reset();
 	}
 
 	void insert_value()
