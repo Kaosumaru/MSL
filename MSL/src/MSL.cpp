@@ -225,7 +225,7 @@ namespace msl
     struct named_value_type : padr<sor< object, array>> {};
     struct named_value : seq< named_value_name, opt<named_value_type> > {};
 
-    struct value : padr< sor< named_value, string, number, simplestring, array, object, false_, true_, null > > {};
+    struct value : padr< sor< false_, true_, named_value, string, number, simplestring, array, object, null > > {};
     struct array_element : seq< value > {};
     //struct value : padr< sor< string, number, object, array, false_, true_, null > > {};
 
