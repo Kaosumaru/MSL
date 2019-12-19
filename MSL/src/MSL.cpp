@@ -337,6 +337,7 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
 
       void push_back()
       {
+          if (!result) return;
          array.push_back( std::move( result ) );
          result.reset();
       }

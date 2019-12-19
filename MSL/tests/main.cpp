@@ -32,6 +32,8 @@ template<typename T>
 bool equals(const std::vector<T>& v, const msl::Value::pointer& ptr)
 {
 	int i = 0;
+
+	if (v.size() != ptr->asArray().size()) return false;
 	for (auto& e : v)
 	{
 		auto& mentry = ptr->asArray()[i];
