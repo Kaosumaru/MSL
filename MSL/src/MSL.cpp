@@ -188,7 +188,7 @@ namespace msl
 
     //array
     struct array_element;
-    struct array_content : opt< list< array_element, value_separator > > {};
+    struct array_content : opt< list_tail< array_element, value_separator > > {};
     struct array : seq< begin_array, array_content, must< end_array > >
     {
         using begin = begin_array;
@@ -200,7 +200,7 @@ namespace msl
     //object
     struct value;
     struct member : if_must< value, name_separator, value > {};
-    struct object_content : opt< list< member, value_separator > > {};
+    struct object_content : opt< list_tail< member, value_separator > > {};
     struct object : seq< begin_object, object_content, must< end_object > >
     {
         using begin = begin_object;
@@ -211,7 +211,7 @@ namespace msl
 
 
     //attr array
-	struct attributes_content : opt< list< member, value_separator > > {};
+	struct attributes_content : opt< list_tail< member, value_separator > > {};
     struct attributes : seq< begin_attr, attributes_content, must< end_attr > >
     {
         using begin = begin_attr;
