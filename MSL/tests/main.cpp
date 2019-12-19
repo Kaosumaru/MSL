@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <map>
 
 #ifndef _MSC_VER
 #define lest_FEATURE_COLOURISE 1
@@ -40,6 +41,29 @@ bool equals(const std::vector<T>& v, const msl::Value::pointer& ptr)
 	return true;
 }
 
+template<typename K, typename V>
+bool equals(const std::map<K,V>& m, const msl::Value::pointer& ptr)
+{
+	auto msl_map = ptr->asMap();
+	int i = 0;
+
+	auto find_key = [&](auto key) -> msl::Value::pointer {
+		for (auto& [k, v] : msl_map)
+		{
+			if (equals(key, k)) return v;
+		}
+		return nullptr;
+	};
+
+	if (m.size() != msl_map.size()) return false;
+	for (auto& [k,v] : m)
+	{
+		auto msl_v = find_key(k);
+		if (!equals(v, msl_v)) return false;
+	}
+	return true;
+}
+
 template<typename T>
 bool is_equal(const T& t, const char* str)
 {
@@ -73,7 +97,13 @@ const lest::test specification[] =
 		EXPECT(is_equal(v, "[1, 2, 3]"));
 		EXPECT(is_equal(v, "[1, 2, 3,]"));
 	},
-
+	CASE("Object_Map")
+	{
+		std::map<string, float> m = { {"a",1},{"b",2},{"c",3} };
+		EXPECT(is_equal(m, "{a:1 b:2 c:3}"));
+		EXPECT(is_equal(m, "{a:1, b:2, c:3}"));
+		EXPECT(is_equal(m, "{a:1, b:2, c:3,}"));
+	},
 };
 
 

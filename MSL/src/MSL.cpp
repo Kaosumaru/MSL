@@ -378,6 +378,7 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
 
       void insert()
       {
+        if (!key) return;
         object[key] = result;
         key.reset();
         result.reset();
@@ -448,6 +449,7 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
 
 	void insert_value()
 	{
+        if (!key) return;
 		attr[key] = result;
 		key.reset();
 		result.reset();
