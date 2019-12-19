@@ -39,3 +39,5 @@ MSLParser/Debug/
 MSLParserTest/Debug/MSLTest.exp
 *.opensdf
 MSLParserTest/MSLParser.VC.opendb
+MSL/.vs/
+MSL/out/

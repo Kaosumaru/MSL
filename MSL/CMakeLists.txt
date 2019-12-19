@@ -34,8 +34,12 @@ endif (EMSCRIPTEN)
 ##folders
 add_folder(msl)
 add_folder(src)
-add_library(MSL ${SRCS})
 
+if(BUILD_TESTS)
+    add_executable(MSL tests/main.cpp ${SRCS})
+else(BUILD_TESTS)
+    add_library(MSL ${SRCS})
+endif(BUILD_TESTS)
 ##dependencies
 
 include_directories( ${PROJECT_SOURCE_DIR} )
