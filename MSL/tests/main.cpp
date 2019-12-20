@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <vector>
 #include <map>
+#include <sstream>
 
 #ifndef _MSC_VER
 #define lest_FEATURE_COLOURISE 1
@@ -9,6 +10,7 @@
 
 #include "lest.hpp"
 #include "msl/MSL.h"
+#include "msl/Serializer.h"
 
 
 using namespace std;
@@ -74,6 +76,23 @@ bool is_equal(const T& t, const char* str)
 	return equals(t, m);
 }
 
+bool test_serialization(const char* str)
+{
+    auto m = vmsl(str);
+    if (!m) return false;
+    std::stringstream ss;
+    msl::Serializer::Write(m, ss);
+    auto str2 = ss.str();
+
+    bool success = str == str2;
+    if (!success)
+    {
+        std::cout << "Expected: " << str << "\n";
+        std::cout << "Got: " << str2 << "\n";
+    }
+    return success;
+}
+
 const lest::test specification[] =
 {
 	CASE("Float")
@@ -106,6 +125,16 @@ const lest::test specification[] =
 		EXPECT(is_equal(m, "{a:1, b:2, c:3}"));
 		EXPECT(is_equal(m, "{a:1, b:2, c:3,}"));
 	},
+
+    CASE("Serializer_simple")
+    {
+        EXPECT(test_serialization("1"));
+        EXPECT(test_serialization("\"()\""));
+        EXPECT(test_serialization("a"));
+        EXPECT(test_serialization("[1, 2, 3]"));
+        EXPECT(test_serialization("{a: 1, b: 2, c: 3}"));
+        EXPECT(test_serialization("Test(a: 1, b: 2, c: 3)[1, 2, 3]"));
+    },
 };
 
 

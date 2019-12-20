@@ -8,10 +8,15 @@ namespace msl
 {
 	class Value
 	{
+		struct Comparer {
+			bool operator()(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) const {
+				return std::tie(a->asString(), a) < std::tie(b->asString(), b);
+			}
+		};
 	public:
 		using pointer = std::shared_ptr<Value>;
 		using ArrayType = std::vector<pointer>;
-		using MapType = std::map<pointer, pointer>;
+		using MapType = std::map<pointer, pointer, Comparer>;
 
 		enum class Type { String, Float, Boolean, Null, Array, Map, Percent };
 

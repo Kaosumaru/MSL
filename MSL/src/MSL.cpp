@@ -180,7 +180,7 @@ namespace msl
 
     //simplestring
     struct simplestringchar : sor<alnum, one<'!','.','-','<','>','\\','/','_'>> {};
-    struct simplestringchar_prefix : sor<alnum, one<'&'>> {};
+    struct simplestringchar_prefix : sor<alpha, one<'&'>> {};
 
     struct simplestring : seq< simplestringchar_prefix , star< simplestringchar >>
     {
