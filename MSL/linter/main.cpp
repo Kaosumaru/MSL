@@ -3,6 +3,24 @@
 #include "msl/MSL.h"
 #include "msl/Serializer.h"
 
+void lintMSL(const char* in_path, const char* out_path)
+{
+	std::cout << "Trying to lint " << in_path << "\n";
+
+	msl::Value::pointer v;
+	{
+		std::ifstream t(in_path);
+		std::string str((std::istreambuf_iterator<char>(t)),
+			std::istreambuf_iterator<char>());
+
+		v = msl::Value::fromString(str);
+	}
+
+	std::ofstream out;
+	out.open(out_path, std::ios::out | std::ios::trunc);
+	msl::Serializer::Write(v, out);
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -15,22 +33,12 @@ int main(int argc, char* argv[])
 
 	auto path = argv[1];
 #else
-	auto path = "v:/test/stats.msl";
-	auto res = "v:/test/stats2.msl";
+	auto in = "v:/test/mech.json";
+	auto out = "v:/test/mech.msl";
+	lintMSL(in, out);
 #endif
 
-	std::cout << "Trying to convert " << path << "\n";
 
-
-	std::ifstream t(path);
-	std::string str((std::istreambuf_iterator<char>(t)),
-		std::istreambuf_iterator<char>());
-
-	auto v = msl::Value::fromString(str);
-
-	std::ofstream out;
-	out.open(res, std::ios::out | std::ios::trunc);
-	msl::Serializer::Write(v, out);
 
 	return 0;
 }

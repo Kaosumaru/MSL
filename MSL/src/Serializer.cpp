@@ -116,14 +116,20 @@ namespace
         void writeArrayMultipleLines(const Value::pointer& ptr)
         {
             auto& arr = ptr->asArray();
+            out << "\n";
+            writeIndent();
             out << "[\n";
-            bool first = true;
+
+            indentLevel++;
             for (auto& e : arr)
             {
+                writeIndent();
                 write(e);
                 out << "\n";
-                first = false;
             }
+            indentLevel--;
+
+            writeIndent();
             out << ']';
         }
 
@@ -133,7 +139,7 @@ namespace
             out << "\n";
             writeIndent();
             out << "{\n";
-            bool first = true;
+ 
             indentLevel++;
             for (auto& [k, v] : arr)
             {
@@ -142,9 +148,9 @@ namespace
                 out << ": ";
                 write(v);
                 out << "\n";
-                first = false;
             }
             indentLevel--;
+
             writeIndent();
             out << '}';
         }
