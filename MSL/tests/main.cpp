@@ -132,7 +132,7 @@ const lest::test specification[] =
         EXPECT(test_serialization("\"()\""));
         EXPECT(test_serialization("a"));
         EXPECT(test_serialization("[1, 2, 3]"));
-        EXPECT(test_serialization("{a: 1, b: 2, c: 3}"));
+        EXPECT(test_serialization("{ a: 1, b: 2, c: 3 }"));
         EXPECT(test_serialization("Test(a: 1, b: 2, c: 3)[1, 2, 3]"));
     },
 };

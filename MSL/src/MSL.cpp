@@ -380,7 +380,11 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
       void insert()
       {
         if (!key) return;
+#ifdef MSL_MAP
         object[key] = result;
+#else
+        object.push_back({ key, result });
+#endif
         key.reset();
         result.reset();
       }
@@ -451,7 +455,11 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
 	void insert_value()
 	{
         if (!key) return;
+#ifdef MSL_MAP
 		attr[key] = result;
+#else
+        attr.push_back({ key, result });
+#endif
 		key.reset();
 		result.reset();
 	}

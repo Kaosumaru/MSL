@@ -16,7 +16,11 @@ namespace msl
 	public:
 		using pointer = std::shared_ptr<Value>;
 		using ArrayType = std::vector<pointer>;
+#ifdef MSL_MAP
 		using MapType = std::map<pointer, pointer, Comparer>;
+#else
+		using MapType = std::vector<std::pair<pointer, pointer>>;
+#endif
 
 		enum class Type { String, Float, Boolean, Null, Array, Map, Percent };
 

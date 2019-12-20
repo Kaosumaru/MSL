@@ -37,6 +37,8 @@ add_folder(src)
 
 if(BUILD_TESTS)
     add_executable(MSL tests/main.cpp ${SRCS})
+elseif(BUILD_LINTER)
+    add_executable(MSL linter/main.cpp ${SRCS})
 else(BUILD_TESTS)
     add_library(MSL ${SRCS})
 endif(BUILD_TESTS)
