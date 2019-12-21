@@ -1,10 +1,14 @@
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include "msl/MSL.h"
 #include "msl/Serializer.h"
 
-void lintMSL(const char* in_path, const char* out_path)
+void lintMSL(const char* in_path)
 {
+	std::filesystem::path out_path{ in_path };
+	out_path = out_path.parent_path() / out_path.stem();
+	out_path += "_linted.msl";
 	std::cout << "Trying to lint " << in_path << "\n";
 
 	msl::Value::pointer v;
@@ -32,10 +36,10 @@ int main(int argc, char* argv[])
 	}
 
 	auto path = argv[1];
+	lintMSL(path);
 #else
 	auto in = "v:/test/mech.json";
-	auto out = "v:/test/mech.msl";
-	lintMSL(in, out);
+	lintMSL(in);
 #endif
 
 

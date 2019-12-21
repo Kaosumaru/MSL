@@ -389,11 +389,33 @@ template< typename Rule > struct value_action : unescape_action< Rule > {};
         result.reset();
       }
 
+      bool object_to_named(result_state& in_result)
+      {
+          auto it = object.begin();
+          for (; it != object.end(); it++)
+              if (it->first->asString() == "Object")
+                  break;
+
+          if (it == object.end())
+            return false;
+
+          auto name = it->second->asString();
+          object.erase(it);
+          in_result.result = std::make_shared<msl::NamedMapValue>(name, msl::Value::MapType{}, std::move(object));
+          
+
+          return true;
+      }
+
       void success( result_state & in_result )
       {
          if ( this->result ) {
             insert();
          }
+
+         #ifdef MSL_OBJECT_TO_NAMED
+         if (object_to_named(in_result)) return;
+         #endif
          in_result.result = std::make_shared<msl::MapValue>(std::move(object));
       }
    };

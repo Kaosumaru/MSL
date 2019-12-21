@@ -47,6 +47,24 @@
           "type": "BOOL"
         }
       ]
+    },
+    {
+      "name": "x64-Release-Linter",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "BUILD_LINTER",
+          "value": "true",
+          "type": "BOOL"
+        }
+      ]
     }
   ]
 }

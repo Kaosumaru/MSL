@@ -11,10 +11,38 @@ namespace
     {
         Context(std::ostream& o) : out(o) {}
 
+        struct Info
+        {
+            int indentLevel = 0;
+            msl::Value::Type type = msl::Value::Type::Null;
+        };
+
         std::ostream& out;
         bool noNewlines = false;
-        int indentLevel = 0;
         int maxSingleLine = 40;
+        bool isObject = false;
+        std::vector<Info> stack = { Info{} };
+
+        auto& ctx() { return stack.back(); }
+
+        void writeIndent()
+        {
+            for (int i = 0; i < ctx().indentLevel; i++)
+                out << "\t";
+        }
+
+        void incIndent(msl::Value::Type type = msl::Value::Type::Null)
+        {
+            auto next = ctx();
+            next.indentLevel++;
+            next.type = type;
+            stack.push_back(next);
+        }
+
+        void decIndent()
+        {
+            stack.pop_back();
+        }
 
         int measureSingleLine(const Value::pointer& ptr)
         {
@@ -65,12 +93,6 @@ namespace
             out << '"' << str << '"';
         }
 
-        void writeIndent()
-        {
-            for(int i = 0; i < indentLevel; i ++)
-                out << "\t";
-        }
-
         void writeNull(const Value::pointer& ptr)
         {
             out << "null";
@@ -116,18 +138,21 @@ namespace
         void writeArrayMultipleLines(const Value::pointer& ptr)
         {
             auto& arr = ptr->asArray();
-            out << "\n";
-            writeIndent();
+            if (ctx().type == msl::Value::Type::Map || isObject)
+            {
+                out << "\n";
+                writeIndent();
+            }
+            
             out << "[\n";
-
-            indentLevel++;
+            incIndent(msl::Value::Type::Array);
             for (auto& e : arr)
             {
                 writeIndent();
                 write(e);
                 out << "\n";
             }
-            indentLevel--;
+            decIndent();
 
             writeIndent();
             out << ']';
@@ -136,11 +161,15 @@ namespace
         void writeMapMultipleLines(const Value::pointer& ptr)
         {
             auto& arr = ptr->asMap();
-            out << "\n";
-            writeIndent();
+            if (ctx().type == msl::Value::Type::Map || isObject)
+            {
+                out << "\n";
+                writeIndent();
+            }
+            
             out << "{\n";
  
-            indentLevel++;
+            incIndent(msl::Value::Type::Map);
             for (auto& [k, v] : arr)
             {
                 writeIndent();
@@ -149,7 +178,7 @@ namespace
                 write(v);
                 out << "\n";
             }
-            indentLevel--;
+            decIndent();
 
             writeIndent();
             out << '}';
@@ -198,8 +227,10 @@ namespace
 
         void write(const Value::pointer& ptr)
         {
+            isObject = false;
             if (!ptr->name().empty())
             {
+                isObject = true;
                 writeParams(ptr);
             }
             auto type = ptr->type();
