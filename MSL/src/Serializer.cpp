@@ -76,12 +76,16 @@ namespace
                 for (int i = 0; i < str.size(); i++)
                 {
                     auto c = str[i];
+                    if (c == ' ') return false;
                     if (i == 0)
                     {
-                        return isalpha(c) || c == '&';
+                        if (!(isalpha(c) || c == '&'))
+                            return false;
                     }
-                    return isalnum(c) || additionalChars.find(c) != additionalChars.end();
+                    if (!(isalnum(c) || additionalChars.find(c) != additionalChars.end()))
+                        return false;
                 }
+                return true;
             };
 
             auto str = ptr->asString();
